@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>领地战 | PvE</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+    background:#ffffff;color:#111111;
+    font-family:system-ui,"Microsoft Yahei",sans-serif;
+    max-width:1300px;margin:20px auto;padding:0 16px;line-height:1.6;
+}
+.split-layout{display:flex;gap:24px;align-items:flex-start;}
+.left-panel{flex:0 0 340px;min-width:340px;}
+.right-panel{flex:1;min-width:0;}
+h1{font-size:22px;margin-bottom:10px;}
+button{
+    border:1px solid #777;background:#fff;padding:8px 12px;margin:4px 3px;
+    font-size:14px;cursor:pointer;
+}
+button:hover{background:#f1f1f1;}
+button:disabled{opacity:0.4;cursor:not-allowed;}
+#log{
+    border:1px solid #ddd;padding:10px;min-height:160px;max-height:320px;
+    overflow-y:auto;font-size:14px;margin:10px 0;
+}
+.info{color:#224488;}
+.win{color:#008822;font-weight:bold;}
+.lose{color:#aa2222;}
+.note{color:#606060;}
+.player-text{color:#000000;font-weight:bold;}
+.npc0-text{color:#ff7800;font-weight:bold;}
+.npc1-text{color:#00bbbb;font-weight:bold;}
+.npc2-text{color:#9922cc;font-weight:bold;}
+.npc3-text{color:#ff44aa;font-weight:bold;}
+.shopbox{border:1px solid #ccc;padding:12px;margin:12px 0;}
+.selArea{border:1px solid #bbb;padding:8px;margin:8px 0;display:none;}
+.mapCell{
+    display:inline-block;width:28px;height:28px;text-align:center;line-height:28px;
+    border:1px solid #eee;cursor:pointer;font-size:13px;vertical-align:top;
+}
+.mapCell.obs{background:#333;color:#fff;}
+.mapCell.empty{background:#fff;}
+.mapCell.r{background:#ff7777;color:#fff;}
+.mapCell.y{background:#ffdd66;}
+.mapCell.b{background:#7799ff;color:#fff;}
+.mapCell.g{background:#77dd77;color:#fff;}
+.mapCell.mark{outline:2px solid black;}
+.mapCell.skillMark{outline:2px solid #f5222d;}
+.bone-dot{font-size:18px;line-height:28px;font-weight:bold;}
+#mapContainer{display:flex;align-items:flex-start;gap:16px;margin:10px 0;}
+#rankPanel{
+    min-width:210px;border:1px solid #ddd;padding:10px 12px;border-radius:4px;
+    font-size:14px;
+}
+#rankPanel h4{margin-bottom:8px;font-size:15px;}
+.rank-row{margin:5px 0;padding:5px 8px;border-left:4px solid #ccc;background:#fafafa;}
+.rank-row .rank-num{font-weight:bold;font-size:15px;}
+.rank-row .team-name{font-weight:bold;}
+.rank-row .betters{font-size:12px;color:#666;margin-top:2px;}
+.out-tag{color:#aa2222;font-weight:bold;}
+.ctrl-row{margin:8px 0;}
+.npc-panel{border:1px solid #aaa;padding:10px;margin:8px 0;}
+.npc-panel h4{margin-bottom:8px;font-size:15px;}
+.npc-item{margin-right:12px;display:inline-block;}
+.bag-info{margin:6px 0;color:#444;}
+.hint-key{background:#eee;padding:4px 6px;font-family:monospace;}
+details{border:1px solid #ddd;padding:10px 14px;margin:10px 0;border-radius:4px;}
+details summary{cursor:pointer;font-weight:bold;font-size:15px;}
+details ul{margin:8px 0 4px 20px;font-size:14px;}
+details li{margin:3px 0;}
+.deploy-hint{
+    border:2px solid #224488;padding:10px;margin:8px 0;font-size:14px;
+    background:#f0f4ff;display:none;
+}
+</style>
+</head>
+<body>
+
+<div class="split-layout">
+
+<div class="left-panel">
+<h1>领地战🏳‍🌈</h1>
+
+<details>
+<summary>📖 游戏规则（点击展开）</summary>
+<ul>
+<li><b>目标</b>：投注一支队伍，通过购买/部署技能影响扩张结果，赢取金币。让所有 NPC 破产即获胜！</li>
+<li><b>初始金币</b>：所有角色（玩家+4NPC）初始均为 <b>10</b> 金币。</li>
+<li><b>刷图限制</b>：每局开始前只能生成一次地图，想换图请重置存档。</li>
+<li><b>购买限制</b>：生成地图后不能再购买技能，请在生成地图前买好。</li>
+<li><b>流程</b>：商店购买技能 → 生成地图 → 选择投注队伍和金额 → 点【开始对局】→ 抽签决定技能部署顺序 → 按顺序部署技能 → 队伍自动扩张（最多22轮）→ 结算。</li>
+<li><b>技能限制</b>：每个角色每局最多使用 <b>2个</b> 技能，且不能两个都是增加初始点位。</li>
+<li><b>技能</b>：骨粉（格子用◎标记，被自己队伍占领时四邻额外扩散，<b>可连环触发</b>，被覆盖则消失）、拆除障碍（部署后立刻移除■）、增加初始点位（部署后立刻在地图上添加一个己方扩张点）。</li>
+<li><b>占用规则</b>：每个格子全局只能被一个技能占用（玩家/NPC通用），先到先得。所有技能只能作用于自己押注的队伍。</li>
+<li><b>地图生成</b>：确保没有任何非障碍格子（含出生点、含边界）被完全包围，每个格子至少有一个相邻空格。</li>
+<li><b>NPC AI</b>：NPC 会评估队伍强度并倾向选强队；技能目标基于 BFS 可达性选择，拆除障碍选扩张收益最大的，骨粉放扩张通道，增加点位放前线。</li>
+<li><b>投注扣除</b>：所有角色（玩家+NPC）的赌注在对局开始时立即扣除，排行榜实时显示扣除后的金币。</li>
+<li><b>结算规则</b>：
+  <ul>
+  <li><b>冠军</b>：押中格子数最多的队伍（可并列），获得双倍回馈（本金+利润=2×投注额）。</li>
+  <li><b>安慰奖</b>：未押中冠军，但你的队伍排名高于所有其他对手押的队伍（同队不计），返还投注额-1（净损失1金币；投注1金币则不返还，仍判定为安慰奖）。</li>
+  <li><b>失败</b>：损失全部投注额。</li>
+  </ul>
+</li>
+<li><b>胜负条件</b>：所有 NPC 破产 → 你胜利了！玩家金币归零 → 破产重置。</li>
+<li><b>快捷键</b>：部署阶段按 1/2/3 选择技能，点击地图格子部署；部署阶段可点【撤回上一个技能】撤销。</li>
+</ul>
+</details>
+
+<div>你的金币：<span id="gold">10</span></div>
+<div class="bag-info">背包(数字键选择)：<span id="playerBag">空</span></div>
+<div class="bag-info">当前待选技能：<span id="curSkillText">无</span></div>
+<div class="bag-info">已部署技能：<span id="deployedCount">0/2</span></div>
+
+<div class="npc-panel">
+<h4>💰 金币排行榜</h4>
+<div id="goldRankContent"></div>
+</div>
+</div>
+
+<div class="right-panel">
+
+<div class="ctrl-row">
+<label>对局模式：</label>
+<button id="btnMode2" onclick="setMode(2)">2队（红/黄）</button>
+<button id="btnMode4" onclick="setMode(4)">4队（红/黄/蓝/绿）</button>
+<span id="modeText">当前：2队模式</span>
+<button id="btnReset" onclick="resetSave()">重置全部存档</button>
+</div>
+
+<div class="shopbox">
+<h3>商店（生成地图前购买）</h3>
+<div>
+<button id="btnBone" onclick="shopBuy('bone')">骨粉【15金币】</button>
+<button id="btnRemoveObs" onclick="shopBuy('removeObs')">拆除障碍【18金币】</button>
+<button id="btnAddPoint" onclick="shopBuy('addPoint')">增加初始点位【22金币】</button>
+</div>
+<div class="bag-info">
+快捷键：<span class="hint-key">1</span>骨粉 &nbsp; <span class="hint-key">2</span>拆除障碍 &nbsp; <span class="hint-key">3</span>增加初始点位<br>
+先在商店买好技能 → 【生成地图】→ 选投注 → 点【开始对局】抽签 → 部署阶段按数字键选技能 → 点击网格选定目标。<br>
+拆除障碍和增加初始点位在部署后<b>立刻生效</b>；骨粉仅做标记，扩张时触发（可连环）。
+</div>
+<div id="shopTip"></div>
+</div>
+
+<div class="ctrl-row">
+<button id="btnGenMap" onclick="genMapOnly()">生成地图(每局一次)</button>
+<label>投注队伍：</label>
+<select id="betTeam">
+<option value="R">红</option><option value="Y">黄</option>
+</select>
+<label>投注金币：</label>
+<input id="betInput" type="number" value="1" min="1" step="1">
+<button id="btnStart" onclick="startGame()">开始对局</button>
+<button id="btnFinishDeploy" onclick="finishPlayerDeploy()" style="display:none;">结束我的部署</button>
+</div>
+
+<div class="deploy-hint" id="deployHint"></div>
+
+<div class="selArea" id="selectPanel">
+<h4>点击地图格子完成技能目标选择</h4>
+<div id="mapClickArea"></div>
+<div id="selectHint"></div>
+<button onclick="undoLastSkill()">↩️ 撤回上一个技能</button>
+</div>
+
+<div id="log"></div>
+
+<div id="mapContainer">
+    <div id="mapWrap"></div>
+    <div id="rankPanel" style="display:none;">
+        <h4>📊 实时排名</h4>
+        <div id="rankContent"></div>
+    </div>
+</div>
+
+</div>
+</div>
+
+<script>
+const SAVE_KEY = "flowerGameSave";
+const MAX_LOG = 120;
+const MAX_SKILLS = 2;
+const MAX_ADDPOINT = 1;
+const INIT_GOLD = 10;
+
+const teamColorMap = {1:"#ff3333", 2:"#cc9900", 3:"#3355cc", 4:"#229922"};
+const teamNameMap  = {1:"红", 2:"黄", 3:"蓝", 4:"绿"};
+const npcIcons = ["🟠","🔵","🟣","💗"];
+const npcColors = ["#ff7800", "#00a8a8", "#8822bb", "#dd3388"];
+const playerColor = "#222222";
+
+const G = {
+    gold:INIT_GOLD, w:9, h:9, mode:2,
+    obstacles:[], spawnPoints:[],
+    bag:{bone:0,removeObs:0,addPoint:0},
+    usedSkillList:[],
+    currentSelectSkill:null,
+    phase:"idle",
+    stepInterval:3000, maxStep:22,
+    skillPrice:{bone:15,removeObs:18,addPoint:22},
+    mapGenerated:false,
+    playerBet:0, playerBetTeam:"R",
+    deployOrder:[], deployIndex:0,
+    npc:[
+        {gold:INIT_GOLD,preBag:[],betTeam:null,betVal:0},
+        {gold:INIT_GOLD,preBag:[],betTeam:null,betVal:0},
+        {gold:INIT_GOLD,preBag:[],betTeam:null,betVal:0},
+        {gold:INIT_GOLD,preBag:[],betTeam:null,betVal:0},
+    ]
+};
+
+const skillKeyMap={"1":"bone","2":"removeObs","3":"addPoint"};
+const skillNameMap={bone:"骨粉",removeObs:"拆除障碍",addPoint:"增加初始点位"};
+const teamInfo={
+    R:{id:1,symbol:"r",name:"红"},
+    Y:{id:2,symbol:"y",name:"黄"},
+    B:{id:3,symbol:"b",name:"蓝"},
+    G:{id:4,symbol:"g",name:"绿"}
+};
+
+let map=[];
+let deployMap=[];
+let boneUsedPlayerList=[];
+let npcBoneUsedList = G.npc.map(()=>[]);
+const dirs=[[0,1],[0,-1],[1,0],[-1,0]];
+
+function isPosSkillOccupied(x,y){
+    if(G.usedSkillList.some(s=>s.target[0]===x&&s.target[1]===y)) return true;
+    for(let n of G.npc){
+        if(n.preBag.some(s=>s.target[0]===x&&s.target[1]===y)) return true;
+    }
+    return false;
+}
+
+function isSpawnPoint(x,y){
+    return G.spawnPoints.some(s=>s[0]===x&&s[1]===y);
+}
+
+function isObstacle(x,y){
+    return G.obstacles.some(o=>o[0]===x&&o[1]===y);
+}
+
+function getActiveTeamIds(){
+    return G.mode===2 ? [1,2] : [1,2,3,4];
+}
+
+function getSpawnOfTeam(teamId){
+    const ids = getActiveTeamIds();
+    const idx = ids.indexOf(teamId);
+    return idx >= 0 ? G.spawnPoints[idx] : null;
+}
+
+function getOtherTeamSpawns(teamId){
+    const ids = getActiveTeamIds();
+    return ids.filter(id=>id!==teamId).map(id=>{
+        const idx = ids.indexOf(id);
+        return G.spawnPoints[idx];
+    });
+}
+
+function initDeployMap(){
+    deployMap = [];
+    for(let y=0;y<G.h;y++){
+        deployMap[y] = [];
+        for(let x=0;x<G.w;x++){
+            deployMap[y][x] = isObstacle(x,y) ? -1 : 0;
+        }
+    }
+    const ids = getActiveTeamIds();
+    for(let ti=0;ti<ids.length;ti++){
+        const [sx,sy] = G.spawnPoints[ti];
+        deployMap[sy][sx] = ids[ti];
+    }
+}
+
+function applySkillImmediately(skillItem){
+    const {type, target} = skillItem;
+    const [tx, ty] = target;
+    if(type === "removeObs"){
+        deployMap[ty][tx] = 0;
+    }else if(type === "addPoint"){
+        if(deployMap[ty][tx] === 0){
+            deployMap[ty][tx] = skillItem.team;
+        }
+    }
+}
+
+function getDeployedCount(){
+    return G.usedSkillList.length;
+}
+
+function updateDeployedCountUI(){
+    document.getElementById("deployedCount").innerText = `${getDeployedCount()}/${MAX_SKILLS}`;
+}
+
+// ===== BFS 工具：计算从出生点出发的可达格子集合（基于当前 deployMap）=====
+function bfsReachable(spawn){
+    let vis=Array.from({length:G.h},()=>Array(G.w).fill(false));
+    let q=[[spawn[0],spawn[1]]];
+    vis[spawn[1]][spawn[0]]=true;
+    let reachable=new Set();
+    while(q.length>0){
+        let [x,y]=q.shift();
+        reachable.add(`${x},${y}`);
+        for(let [dx,dy] of dirs){
+            let nx=x+dx,ny=y+dy;
+            if(nx>=0&&nx<G.w&&ny>=0&&ny<G.h&&!vis[ny][nx]){
+                if(deployMap[ny][nx] !== -1){
+                    vis[ny][nx]=true;
+                    q.push([nx,ny]);
+                }
+            }
+        }
+    }
+    return reachable;
+}
+
+// 计算拆除某个障碍后可达区域的增量
+function calcReachGain(obsX, obsY, spawn){
+    const before = bfsReachable(spawn).size;
+    const old = deployMap[obsY][obsX];
+    deployMap[obsY][obsX] = 0;
+    const after = bfsReachable(spawn).size;
+    deployMap[obsY][obsX] = old;
+    return after - before;
+}
+
+function evaluateTeamStrength(teamId){
+    const spawn = getSpawnOfTeam(teamId);
+    if(!spawn) return 0;
+    const reachable = bfsReachable(spawn);
+    let reach = reachable.size;
+    const cx=(G.w-1)/2, cy=(G.h-1)/2;
+    const dc=Math.abs(spawn[0]-cx)+Math.abs(spawn[1]-cy);
+    const centerBonus=Math.max(0,5-dc)*0.3;
+    return reach + centerBonus;
+}
+
+// ===== NPC 选队：提高权重指数，更倾向选强队 =====
+function npcPickTeam(){
+    const ids=getActiveTeamIds();
+    const scores=ids.map(id=>evaluateTeamStrength(id));
+    const weights=scores.map(s=>Math.pow(Math.max(1,s), 2.5));
+    const total=weights.reduce((a,b)=>a+b,0);
+    let r=Math.random()*total;
+    for(let i=0;i<ids.length;i++){
+        r-=weights[i];
+        if(r<=0) return ids[i];
+    }
+    return ids[0];
+}
+
+// ===== NPC 技能目标选择：基于 BFS 可达性 =====
+function pickTargetByStrategy(npcObj, skillType){
+    const myTeam = npcObj.betTeam;
+    if(!myTeam) return null;
+    const mySpawn = getSpawnOfTeam(myTeam);
+    if(!mySpawn) return null;
+
+    const reachable = bfsReachable(mySpawn);
+    let candidates = [];
+
+    for(let y=0;y<G.h;y++){
+        for(let x=0;x<G.w;x++){
+            const v = deployMap[y][x];
+            const isSpawn = isSpawnPoint(x,y);
+            const occupied = isPosSkillOccupied(x,y);
+
+            if(skillType === "removeObs"){
+                if(v !== -1 || occupied) continue;
+                // 拆除障碍：选可达增量最大的
+                const gain = calcReachGain(x, y, mySpawn);
+                if(gain <= 0) continue; // 拆了没用的不选
+                candidates.push({x,y, score: gain * 10 + Math.random()});
+            }else{
+                // 骨粉/增加点位：只选 BFS 可达的空格
+                if(v !== 0 || isSpawn || occupied) continue;
+                if(!reachable.has(`${x},${y}`)) continue;
+                const dMy = Math.abs(x-mySpawn[0]) + Math.abs(y-mySpawn[1]);
+                let score = 10;
+                if(skillType === "bone"){
+                    // 骨粉：偏好距离2-4的扩张通道
+                    if(dMy >= 2 && dMy <= 4) score += 6;
+                    else if(dMy < 2) score -= 4;
+                    else if(dMy > 6) score -= (dMy-6)*2;
+                }else{
+                    // 增加初始点位：偏好距离4-7的扩张前线
+                    if(dMy >= 4 && dMy <= 7) score += 6;
+                    else if(dMy < 3) score -= 4;
+                    else if(dMy > 8) score -= (dMy-8)*2;
+                }
+                candidates.push({x,y, score});
+            }
+        }
+    }
+    if(candidates.length === 0) return null;
+    candidates.sort((a,b)=>b.score-a.score);
+    const takeCount = Math.max(3, Math.ceil(candidates.length * 0.4));
+    const pool = candidates.slice(0, takeCount);
+    const chosen = pool[Math.floor(Math.random()*pool.length)];
+    return [chosen.x, chosen.y];
+}
+
+function getBoneTeamAt(x,y){
+    for(let s of G.usedSkillList){
+        if(s.type==="bone" && s.target[0]===x&&s.target[1]===y) return s.team;
+    }
+    for(let ni=0;ni<4;ni++){
+        for(let s of G.npc[ni].preBag){
+            if(s.type==="bone" && s.target[0]===x&&s.target[1]===y) return s.team;
+        }
+    }
+    return null;
+}
+
+function boneDotHTML(teamId){
+    return `<span class="bone-dot" style="color:${teamColorMap[teamId]};">◎</span>`;
+}
+
+function isConsolationEligible(myTeamId, allRoles, cnt){
+    const myRank = getRank(cnt, myTeamId);
+    for(let role of allRoles){
+        if(role.teamId === myTeamId) continue;
+        const otherRank = getRank(cnt, role.teamId);
+        if(otherRank <= myRank) return false;
+    }
+    return true;
+}
+
+function isNpcActiveThisRound(idx){
+    if(G.phase === "idle") return false;
+    return G.deployOrder.some(a => a.type==="npc" && a.idx===idx);
+}
+
+function updateGoldRank(){
+    const roles = [
+        {name:"你", gold:G.gold, color:playerColor, idx:-1},
+        {name:"NPC0"+npcIcons[0], gold:G.npc[0].gold, color:npcColors[0], idx:0},
+        {name:"NPC1"+npcIcons[1], gold:G.npc[1].gold, color:npcColors[1], idx:1},
+        {name:"NPC2"+npcIcons[2], gold:G.npc[2].gold, color:npcColors[2], idx:2},
+        {name:"NPC3"+npcIcons[3], gold:G.npc[3].gold, color:npcColors[3], idx:3},
+    ];
+    function getGoldRank(gold){
+        let higher = 0;
+        for(let r of roles){ if(r.gold > gold) higher++; }
+        return higher + 1;
+    }
+    roles.sort((a,b)=>{
+        if(b.gold !== a.gold) return b.gold - a.gold;
+        return a.idx - b.idx;
+    });
+    let html = "";
+    for(let r of roles){
+        const rank = getGoldRank(r.gold);
+        let outTag = "";
+        if(r.idx >= 0 && r.gold <= 0 && !isNpcActiveThisRound(r.idx)){
+            outTag = ` <span class="out-tag">——OUT</span>`;
+        }
+        html += `<div class="rank-row" style="border-left-color:${r.color};">
+            <span class="rank-num">第${rank}名</span>
+            <span class="team-name" style="color:${r.color};">${r.name}</span>
+            ：<b>${r.gold}</b>金币${outTag}
+        </div>`;
+    }
+    document.getElementById("goldRankContent").innerHTML = html;
+}
+
+function getPlayerBetTeamId(){
+    if(G.phase === "idle"){
+        const sel = document.getElementById("betTeam");
+        return sel ? (teamInfo[sel.value]?.id ?? null) : null;
+    }
+    return teamInfo[G.playerBetTeam]?.id ?? null;
+}
+
+function getTeamCounts(){
+    let cnt={1:0,2:0,3:0,4:0};
+    if(map.length > 0){
+        for(let y=0;y<G.h;y++) for(let x=0;x<G.w;x++){
+            if(map[y][x]>=1) cnt[map[y][x]]++;
+        }
+    }else if(deployMap.length > 0){
+        for(let y=0;y<G.h;y++) for(let x=0;x<G.w;x++){
+            if(deployMap[y][x]>=1) cnt[deployMap[y][x]]++;
+        }
+    }
+    return cnt;
+}
+
+function getRank(cnt, teamId){
+    const ids = getActiveTeamIds();
+    let higher = 0;
+    for(let t of ids){ if(cnt[t] > cnt[teamId]) higher++; }
+    return higher + 1;
+}
+
+function getBettersByTeam(teamId){
+    const list = [];
+    const pId = getPlayerBetTeamId();
+    if(pId === teamId) list.push("你");
+    for(let i=0;i<4;i++){
+        const n = G.npc[i];
+        if(G.phase === "idle") continue;
+        if(n.betTeam === teamId) list.push("NPC"+i);
+    }
+    return list;
+}
+
+function updateRankPanel(){
+    const panel = document.getElementById("rankPanel");
+    if(map.length===0 && deployMap.length===0){
+        panel.style.display = "none";
+        return;
+    }
+    panel.style.display = "block";
+    const cnt = getTeamCounts();
+    const ids = getActiveTeamIds();
+    const sorted = [...ids].sort((a,b)=>{
+        if(cnt[b] !== cnt[a]) return cnt[b]-cnt[a];
+        return a-b;
+    });
+
+    let html = "";
+    for(let tid of sorted){
+        const rank = getRank(cnt, tid);
+        const betters = getBettersByTeam(tid);
+        const betterText = G.phase==="idle" ? "对局开始后确定" : (betters.length>0 ? betters.join("、") : "无");
+        html += `<div class="rank-row" style="border-left-color:${teamColorMap[tid]};">
+            <span class="rank-num">第${rank}名</span>
+            <span class="team-name" style="color:${teamColorMap[tid]};">${teamNameMap[tid]}</span>
+            ：<b>${cnt[tid]}</b>格
+            <div class="betters">押注：${betterText}</div>
+        </div>`;
+    }
+    document.getElementById("rankContent").innerHTML = html;
+}
+
+document.addEventListener("keydown",function(e){
+    if(G.phase !== "deploy") return;
+    const actor = G.deployOrder[G.deployIndex];
+    if(!actor || actor.type !== "player") return;
+    const st=skillKeyMap[e.key];
+    if(!st) return;
+    if(getDeployedCount() >= MAX_SKILLS){
+        log(`❌每局最多使用${MAX_SKILLS}个技能`,"lose");return;
+    }
+    if(G.bag[st]<=0){
+        log(`❌背包没有【${skillNameMap[st]}】`,"lose");
+        return;
+    }
+    G.currentSelectSkill=st;
+    document.getElementById("curSkillText").innerText=skillNameMap[st];
+    const hintMap={
+        bone:"选择骨粉触发点位（只能放空格子，可连环触发）",
+        removeObs:"选择要拆除的障碍物■（部署后立刻拆除）",
+        addPoint:"选择空格子作为额外初始点（部署后立刻生效，不能两个都用增加初始点位）"
+    };
+    showSelectPanel(st,hintMap[st]);
+});
+
+function undoLastSkill(){
+    if(G.phase !== "deploy"){log("❌仅在部署阶段可撤回","lose");return;}
+    const actor = G.deployOrder[G.deployIndex];
+    if(!actor || actor.type !== "player"){log("❌当前不是你的回合","lose");return;}
+    if(G.usedSkillList.length === 0){log("❌没有可撤回的技能","lose");return;}
+
+    const last = G.usedSkillList.pop();
+    G.bag[last.type]++;
+    const [tx,ty] = last.target;
+
+    if(last.type === "removeObs"){
+        if(isObstacle(tx,ty)){
+            deployMap[ty][tx] = -1;
+        }
+    }else if(last.type === "addPoint"){
+        deployMap[ty][tx] = 0;
+    }
+
+    G.currentSelectSkill = null;
+    document.getElementById("curSkillText").innerText = "无";
+    logPlayer(`↩️撤回了【${skillNameMap[last.type]}】(${tx},${ty})，已退还到背包`);
+    updatePlayerBagUI();
+    updateDeployedCountUI();
+    saveGame();
+    renderVisualMapPreview();
+    renderClickMap();
+    updateRankPanel();
+}
+
+function genMapOnly(){
+    if(G.phase!=="idle"){log("❌对局运行中不能生成地图","lose");return;}
+    if(G.mapGenerated){
+        log("❌每局只能生成一次地图，请勿刷图。请开始对局或重置存档","lose");
+        return;
+    }
+
+    clearLog();
+    map=[];
+    for(let s of G.usedSkillList){ G.bag[s.type]++; }
+    G.usedSkillList=[];
+    for(let n of G.npc){ n.preBag=[]; n.betTeam=null; n.betVal=0; }
+    updatePlayerBagUI();
+    updateDeployedCountUI();
+
+    const spawnCount = G.mode===2?2:4;
+    let valid = false;
+    let attempts = 0;
+
+    while(!valid){
+        attempts++;
+        G.obstacles=[];
+        G.spawnPoints=[];
+
+        const obsSet = new Set();
+        while(obsSet.size < 8){
+            let x=Math.floor(Math.random()*G.w);
+            let y=Math.floor(Math.random()*G.h);
+            obsSet.add(`${x},${y}`);
+        }
+        G.obstacles = [...obsSet].map(s=>{
+            let [x,y]=s.split(',').map(Number);
+            return [x,y];
+        });
+
+        while(G.spawnPoints.length < spawnCount){
+            let x=Math.floor(Math.random()*G.w);
+            let y=Math.floor(Math.random()*G.h);
+            if(isObstacle(x,y)) continue;
+            if(G.spawnPoints.some(p=>p[0]===x&&p[1]===y)) continue;
+            G.spawnPoints.push([x,y]);
+        }
+
+        valid = true;
+        outer:
+        for(let y=0;y<G.h;y++){
+            for(let x=0;x<G.w;x++){
+                if(isObstacle(x,y)) continue;
+                let hasEmpty = false;
+                for(let [dx,dy] of dirs){
+                    let nx=x+dx, ny=y+dy;
+                    if(nx<0||nx>=G.w||ny<0||ny>=G.h) continue;
+                    if(!isObstacle(nx,ny) && !isSpawnPoint(nx,ny)){
+                        hasEmpty = true;
+                        break;
+                    }
+                }
+                if(!hasEmpty){ valid = false; break outer; }
+            }
+        }
+    }
+
+    G.mapGenerated=true;
+    initDeployMap();
+    log(`🗺地图生成完成（尝试${attempts}次）：${G.obstacles.length}个障碍，${G.spawnPoints.length}个出生点；选投注后点【开始对局】`,"info");
+    log("⚠️地图已生成，不能再购买技能","note");
+    renderVisualMapPreview();
+    updateRankPanel();
+    updateDeployedCountUI();
+    updateGoldUI();
+    saveGame();
+    updateButtonStates();
+}
+
+function renderVisualMapPreview(){
+    const wrap=document.getElementById("mapWrap");
+    wrap.innerHTML="";
+    for(let y=0;y<G.h;y++){
+        const line=document.createElement("div");
+        for(let x=0;x<G.w;x++){
+            const c=document.createElement("span");
+            c.className="mapCell";
+            const v = deployMap[y][x];
+            const skillUsed=isPosSkillOccupied(x,y);
+            if(v===-1){c.classList.add("obs");c.innerText="■";}
+            else if(v===0){
+                c.classList.add("empty");
+                const boneTeam = getBoneTeamAt(x,y);
+                if(boneTeam){ c.innerHTML = boneDotHTML(boneTeam); }
+                else { c.innerText="·"; }
+            }
+            else if(v===1){c.classList.add("r");c.innerText="R";}
+            else if(v===2){c.classList.add("y");c.innerText="Y";}
+            else if(v===3){c.classList.add("b");c.innerText="B";}
+            else if(v===4){c.classList.add("g");c.innerText="G";}
+            if(isSpawnPoint(x,y)) c.classList.add("mark");
+            if(skillUsed) c.classList.add("skillMark");
+            line.appendChild(c);
+        }
+        wrap.appendChild(line);
+    }
+}
+
+function updatePlayerBagUI(){
+    const el=document.getElementById("playerBag");
+    const arr=[];
+    if(G.bag.bone>0) arr.push(`骨粉×${G.bag.bone}`);
+    if(G.bag.removeObs>0) arr.push(`拆除障碍×${G.bag.removeObs}`);
+    if(G.bag.addPoint>0) arr.push(`增加初始点位×${G.bag.addPoint}`);
+    el.innerText=arr.length>0?arr.join(" | "):"空";
+}
+
+function updateGoldUI(){
+    document.getElementById("gold").innerText=G.gold;
+    updateGoldRank();
+}
+
+function refreshBetTeamOptions(){
+    const sel=document.getElementById("betTeam");
+    sel.innerHTML="";
+    if(G.mode===2){
+        sel.innerHTML+=`<option value="R">红</option><option value="Y">黄</option>`;
+    }else{
+        sel.innerHTML+=`<option value="R">红</option><option value="Y">黄</option><option value="B">蓝</option><option value="G">绿</option>`;
+    }
+}
+
+function updateButtonStates(){
+    const busy = G.phase !== "idle";
+    const playerTurn = G.phase==="deploy" && G.deployOrder[G.deployIndex]?.type==="player";
+    const shopLocked = busy || G.mapGenerated;
+
+    document.getElementById("btnMode2").disabled = busy;
+    document.getElementById("btnMode4").disabled = busy;
+    document.getElementById("btnReset").disabled = busy;
+    document.getElementById("btnBone").disabled = shopLocked;
+    document.getElementById("btnRemoveObs").disabled = shopLocked;
+    document.getElementById("btnAddPoint").disabled = shopLocked;
+    document.getElementById("btnGenMap").disabled = busy || G.mapGenerated;
+    document.getElementById("btnStart").disabled = busy || !G.mapGenerated;
+    document.getElementById("btnFinishDeploy").disabled = !playerTurn;
+    document.getElementById("btnFinishDeploy").style.display = playerTurn ? "inline-block" : "none";
+    document.getElementById("betTeam").disabled = busy;
+    document.getElementById("betInput").disabled = busy;
+}
+
+function saveGame(){
+    const data = {
+        playerGold: G.gold,
+        bag: {...G.bag},
+        npcGold: G.npc.map(n=>n.gold),
+        mode: G.mode,
+        obstacles: G.obstacles,
+        spawnPoints: G.spawnPoints,
+        usedSkillList: G.usedSkillList,
+        deployMap: deployMap,
+        mapGenerated: G.mapGenerated
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+}
+
+function loadGame(){
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return false;
+    try{
+        const d = JSON.parse(raw);
+        G.gold = d.playerGold ?? INIT_GOLD;
+        G.bag = d.bag ?? {bone:0,removeObs:0,addPoint:0};
+        G.mode = d.mode ?? 2;
+        G.obstacles = d.obstacles ?? [];
+        G.spawnPoints = d.spawnPoints ?? [];
+        G.usedSkillList = d.usedSkillList ?? [];
+        deployMap = d.deployMap ?? [];
+        G.mapGenerated = d.mapGenerated ?? false;
+        for(let i=0;i<4;i++){
+            G.npc[i].gold = d.npcGold?.[i] ?? INIT_GOLD;
+        }
+        return true;
+    }catch(e){
+        return false;
+    }
+}
+
+function resetSave(){
+    if(G.phase!=="idle"){log("❌对局运行中不能重置存档","lose");return;}
+    localStorage.removeItem(SAVE_KEY);
+    G.gold=INIT_GOLD;
+    G.bag={bone:0,removeObs:0,addPoint:0};
+    G.usedSkillList=[];
+    G.currentSelectSkill=null;
+    G.mapGenerated=false;
+    G.obstacles=[]; G.spawnPoints=[];
+    deployMap=[];
+    map=[];
+    G.mode=2;
+    document.getElementById("curSkillText").innerText="无";
+    document.getElementById("modeText").innerText="当前：2队模式";
+    for(let i=0;i<4;i++){G.npc[i].gold=INIT_GOLD;G.npc[i].preBag=[];G.npc[i].betTeam=null;G.npc[i].betVal=0;}
+    refreshBetTeamOptions();
+    updateGoldUI();
+    updatePlayerBagUI();
+    updateDeployedCountUI();
+    updateButtonStates();
+    document.getElementById("mapWrap").innerHTML="";
+    document.getElementById("rankPanel").style.display="none";
+    document.getElementById("rankContent").innerHTML="";
+    clearLog();
+    log("✅存档已重置","info");
+}
+
+function setMode(m){
+    if(G.phase!=="idle"){log("❌对局运行中不能切换模式","lose");return;}
+    G.mode=m;
+    G.mapGenerated=false;
+    G.usedSkillList=[];
+    G.obstacles=[]; G.spawnPoints=[];
+    deployMap=[];
+    document.getElementById("modeText").innerText=`当前：${m}队模式`;
+    refreshBetTeamOptions();
+    document.getElementById("mapWrap").innerHTML="";
+    document.getElementById("rankPanel").style.display="none";
+    saveGame();
+    updateButtonStates();
+}
+
+function renderClickMap(){
+    const wrap = document.getElementById("mapClickArea");
+    wrap.innerHTML = "";
+    for(let y=0;y<G.h;y++){
+        for(let x=0;x<G.w;x++){
+            const div = document.createElement("span");
+            div.className = "mapCell";
+            const v = deployMap[y][x];
+            const skillUsed=isPosSkillOccupied(x,y);
+            if(v===-1){div.classList.add("obs");div.innerText="■";}
+            else if(v===0){
+                div.classList.add("empty");
+                const boneTeam = getBoneTeamAt(x,y);
+                if(boneTeam){ div.innerHTML = boneDotHTML(boneTeam); }
+                else { div.innerText="·"; }
+            }
+            else if(v===1){div.classList.add("r");div.innerText="R";}
+            else if(v===2){div.classList.add("y");div.innerText="Y";}
+            else if(v===3){div.classList.add("b");div.innerText="B";}
+            else if(v===4){div.classList.add("g");div.innerText="G";}
+            if(isSpawnPoint(x,y)) div.classList.add("mark");
+            if(skillUsed) div.classList.add("skillMark");
+            div.dataset.x=x;div.dataset.y=y;
+            div.onclick=()=>onCellClick(x,y);
+            wrap.appendChild(div);
+        }
+        wrap.appendChild(document.createElement("br"));
+    }
+}
+
+function showSelectPanel(skillType,hint){
+    document.getElementById("selectPanel").style.display="block";
+    document.getElementById("selectHint").innerText = hint;
+    renderClickMap();
+}
+
+function onCellClick(x,y){
+    if(G.phase !== "deploy") return;
+    const actor = G.deployOrder[G.deployIndex];
+    if(!actor || actor.type !== "player") return;
+
+    const st=G.currentSelectSkill;
+    if(!st){log("💡请先按数字1/2/3选中技能","info");return;}
+
+    if(getDeployedCount() >= MAX_SKILLS){
+        log(`❌每局最多使用${MAX_SKILLS}个技能`,"lose");return;
+    }
+    if(st === "addPoint" && G.usedSkillList.filter(s=>s.type==="addPoint").length >= MAX_ADDPOINT){
+        log(`❌不能两个技能都用增加初始点位（最多${MAX_ADDPOINT}个）`,"lose");return;
+    }
+
+    if(isPosSkillOccupied(x,y)){
+        log(`❌坐标(${x},${y})已被技能占用`,"lose");return;
+    }
+
+    const v = deployMap[y][x];
+    const myTeamId = teamInfo[G.playerBetTeam].id;
+
+    if(st==="bone"){
+        if(v !== 0){log("❌骨粉只能放在空格子上","lose");return;}
+        const skillItem = {type:st,target:[x,y],team:myTeamId};
+        G.usedSkillList.push(skillItem);
+        G.bag.bone--;
+        logPlayer(`✅骨粉部署在(${x},${y})，归属${teamNameMap[myTeamId]}队（扩张时触发，可连环）`);
+    }else if(st==="removeObs"){
+        if(v !== -1){log("❌请点击障碍物■","lose");return;}
+        const skillItem = {type:st,target:[x,y],team:myTeamId};
+        G.usedSkillList.push(skillItem);
+        G.bag.removeObs--;
+        applySkillImmediately(skillItem);
+        logPlayer(`✅拆除障碍部署在(${x},${y})，已立刻拆除`);
+    }else if(st==="addPoint"){
+        if(v !== 0){log("❌增加初始点位只能放在空格子上","lose");return;}
+        if(isSpawnPoint(x,y)){log("❌不能选择已存在的出生点","lose");return;}
+        const skillItem = {type:st,target:[x,y],team:myTeamId};
+        G.usedSkillList.push(skillItem);
+        G.bag.addPoint--;
+        applySkillImmediately(skillItem);
+        logPlayer(`✅增加初始点位部署在(${x},${y})，已立刻生效，归属${teamNameMap[myTeamId]}队`);
+    }
+
+    updatePlayerBagUI();
+    updateDeployedCountUI();
+    saveGame();
+    renderVisualMapPreview();
+    renderClickMap();
+    updateRankPanel();
+
+    if(G.bag[st] <= 0 || getDeployedCount() >= MAX_SKILLS){
+        G.currentSelectSkill=null;
+        document.getElementById("curSkillText").innerText="无";
+        if(getDeployedCount() >= MAX_SKILLS) log(`💡已达${MAX_SKILLS}个技能上限`,"note");
+        else log("💡该类型技能已用完","note");
+    }
+}
+
+function logPlayer(text){ logColor(text,"player-text"); }
+function logNpc(idx,text){
+    const cls = ["npc0-text","npc1-text","npc2-text","npc3-text"][idx];
+    logColor(text,cls);
+}
+function logColor(text,cls){
+    const lg=document.getElementById("log");
+    if(!lg) return;
+    if(lg.children.length >= MAX_LOG){
+        lg.innerHTML = '<div class="note">📋日志已达上限，自动清空旧记录</div>';
+    }
+    const sp=document.createElement("div");
+    sp.className=cls;
+    sp.innerText=text;
+    lg.appendChild(sp);
+    lg.scrollTop=lg.scrollHeight;
+}
+
+function log(text,cls=""){
+    const lg=document.getElementById("log");
+    if(!lg) return;
+    if(lg.children.length >= MAX_LOG){
+        lg.innerHTML = '<div class="note">📋日志已达上限，自动清空旧记录</div>';
+    }
+    const sp=document.createElement("div");
+    sp.className=cls;
+    sp.innerText=text;
+    lg.appendChild(sp);
+    lg.scrollTop=lg.scrollHeight;
+}
+
+function clearLog(){
+    const lg=document.getElementById("log");
+    if(lg) lg.innerHTML="";
+}
+
+function shopBuy(skill){
+    if(G.phase!=="idle"){log("❌对局运行中不能购买","lose");return;}
+    if(G.mapGenerated){log("❌已生成地图，不能再购买技能，请重置存档后重新购买","lose");return;}
+    const price=G.skillPrice[skill];
+    if(G.gold<price){log(`❌金币不足，需要${price}`,"lose");return;}
+    G.gold -= price;
+    G.bag[skill]++;
+    updateGoldUI();
+    updatePlayerBagUI();
+    saveGame();
+    log(`✅预购【${skillNameMap[skill]}】×+1存入背包，生成地图后部署`,"info");
+}
+
+// ===== NPC 买技能：更积极买2个，技能权重调整 =====
+function npcBatchBuy(npcObj,idx){
+    if(npcObj.gold <= 0 || !npcObj.betTeam) return;
+
+    const r = Math.random();
+    let buyCount;
+    if(r < 0.05) buyCount = 0;       // 5% 不买
+    else if(r < 0.40) buyCount = 1;   // 35% 买1个
+    else buyCount = 2;                  // 60% 买2个
+
+    if(buyCount === 0){
+        logNpc(idx, `🤖NPC${idx}本局不使用技能`);
+        return;
+    }
+
+    let bought = 0;
+    let hasAddPoint = false;
+    // 技能权重：骨粉:拆除:增加 = 3:4:3（降低骨粉，提高确定性技能）
+    const weights = {bone:3, removeObs:4, addPoint:3};
+
+    for(let i=0; i<buyCount; i++){
+        let available = ["bone","removeObs","addPoint"].filter(sk=>{
+            if(npcObj.gold < G.skillPrice[sk]) return false;
+            if(sk === "addPoint" && hasAddPoint) return false;
+            return true;
+        });
+        if(available.length === 0) break;
+
+        let totalW = available.reduce((s,sk)=>s+weights[sk], 0);
+        let rr = Math.random() * totalW;
+        let pick = available[0];
+        for(let sk of available){
+            rr -= weights[sk];
+            if(rr <= 0){ pick = sk; break; }
+        }
+
+        const tgt = pickTargetByStrategy(npcObj, pick);
+        if(!tgt) continue;
+
+        npcObj.gold -= G.skillPrice[pick];
+        const skillItem = {type:pick, target:tgt, team:npcObj.betTeam};
+        npcObj.preBag.push(skillItem);
+        applySkillImmediately(skillItem);
+
+        if(pick === "addPoint") hasAddPoint = true;
+        bought++;
+
+        logNpc(idx, `🤖NPC${idx}购买【${skillNameMap[pick]}】目标(${tgt[0]},${tgt[1]})${pick!=="bone"?"，已立刻生效":""}`);
+    }
+
+    if(bought === 0){
+        logNpc(idx, `🤖NPC${idx}本局不使用技能`);
+    }else if(bought < buyCount){
+        logNpc(idx, `🤖NPC${idx}计划买${buyCount}个，实际买到${bought}个`);
+    }
+    updateGoldUI();
+}
+
+// ===== NPC 投注：目标30%金币，更激进 =====
+function weightedBetValue(gold){
+    if(gold <= 0) return 0;
+    const target = Math.max(1, Math.round(gold * 0.3));
+    const maxVal = Math.min(gold, Math.max(target + 4, Math.ceil(target * 1.8)));
+    const candidates = [];
+    for(let v=1; v<=maxVal; v++){
+        let weight;
+        if(v <= target){
+            const dist = target - v;
+            weight = Math.max(0.05, 1 - dist / (target * 1.0));
+        }else{
+            const ratio = (v - target) / target;
+            weight = Math.max(0.01, Math.exp(-ratio * 1.8));
+        }
+        candidates.push({v, weight});
+    }
+    let total = candidates.reduce((s,c)=>s+c.weight, 0);
+    let r = Math.random() * total;
+    for(let c of candidates){
+        r -= c.weight;
+        if(r <= 0) return c.v;
+    }
+    return Math.min(target, gold);
+}
+
+function renderVisualMap(){
+    const wrap=document.getElementById("mapWrap");
+    wrap.innerHTML="";
+    for(let y=0;y<G.h;y++){
+        const line=document.createElement("div");
+        for(let x=0;x<G.w;x++){
+            const c=document.createElement("span");
+            c.className="mapCell";
+            const v=map[y][x];
+            if(v===-1){c.classList.add("obs");c.innerText="■";}
+            else if(v===0){
+                c.classList.add("empty");
+                const boneTeam = getBoneTeamAt(x,y);
+                if(boneTeam){ c.innerHTML = boneDotHTML(boneTeam); }
+                else { c.innerText="·"; }
+            }
+            else if(v===1){c.classList.add("r");c.innerText="R";}
+            else if(v===2){c.classList.add("y");c.innerText="Y";}
+            else if(v===3){c.classList.add("b");c.innerText="B";}
+            else if(v===4){c.classList.add("g");c.innerText="G";}
+            line.appendChild(c);
+        }
+        wrap.appendChild(line);
+    }
+    updateRankPanel();
+}
+
+function startGame(){
+    try{
+        if(G.phase!=="idle"){log("对局运行中","lose");return;}
+        if(!G.mapGenerated){log("❌请先生成地图！","lose");return;}
+        if(G.gold <= 0){
+            alert("您已破产");
+            resetSave();
+            return;
+        }
+        if(G.npc.every(n=>n.gold<=0)){
+            alert("你胜利了！所有NPC都已破产！");
+            resetSave();
+            return;
+        }
+
+        const betRaw = document.getElementById("betInput").value;
+        const bet = Number(betRaw);
+        if(!Number.isInteger(bet) || bet < 1 || bet > G.gold){
+            log("❌投注金额必须是1到当前金币数之间的整数","lose");return;
+        }
+        G.playerBet = bet;
+        G.playerBetTeam = document.getElementById("betTeam").value;
+
+        G.phase = "deploy";
+        log("=====新对局：技能部署阶段====","info");
+        log(`💰你的投注：${teamInfo[G.playerBetTeam].name}队，${G.playerBet}金币`,"info");
+        log(`📌每角色最多${MAX_SKILLS}个技能，不能两个都用增加初始点位`,"note");
+
+        for(let i=0;i<4;i++){
+            const n = G.npc[i];
+            if(n.gold <= 0){ n.betTeam=null; n.betVal=0; continue; }
+            n.betTeam = npcPickTeam();
+        }
+
+        const allActors = [{type:"player"}];
+        for(let i=0;i<4;i++){
+            if(G.npc[i].gold > 0) allActors.push({type:"npc",idx:i});
+        }
+        G.deployOrder = allActors.sort(()=>Math.random()-0.5);
+        G.deployIndex = 0;
+        log(`🎲技能部署抽签顺序：${G.deployOrder.map(a=>a.type==="player"?"玩家":"NPC"+a.idx).join(" → ")}`,"info");
+
+        updateButtonStates();
+        updateRankPanel();
+        renderVisualMapPreview();
+        nextDeployTurn();
+    }catch(err){
+        log(`❌出错：${err.message}`,"lose");
+        G.phase="idle";
+        updateButtonStates();
+    }
+}
+
+function nextDeployTurn(){
+    if(G.deployIndex >= G.deployOrder.length){
+        document.getElementById("selectPanel").style.display="none";
+        document.getElementById("deployHint").style.display="none";
+        startBattle();
+        return;
+    }
+    const actor = G.deployOrder[G.deployIndex];
+    updateButtonStates();
+
+    if(actor.type === "player"){
+        const hint = document.getElementById("deployHint");
+        hint.style.display="block";
+        hint.innerText = `🟢 轮到你部署技能（第 ${G.deployIndex+1}/${G.deployOrder.length} 位）。按数字键 1/2/3 选择技能，点击地图部署；全部部署完点【结束我的部署】。最多${MAX_SKILLS}个，不能两个都用增加初始点位。`;
+        G.currentSelectSkill=null;
+        document.getElementById("curSkillText").innerText="无";
+        log("🟢轮到你部署技能","info");
+        document.getElementById("selectPanel").style.display="block";
+        document.getElementById("selectHint").innerText="请先按数字键 1/2/3 选择要部署的技能";
+        renderClickMap();
+    }else{
+        const idx = actor.idx;
+        document.getElementById("selectPanel").style.display="none";
+        document.getElementById("deployHint").style.display="block";
+        document.getElementById("deployHint").innerText = `🤖 轮到 NPC${idx} 部署技能（第 ${G.deployIndex+1}/${G.deployOrder.length} 位），请稍候...`;
+        log(`🤖轮到NPC${idx}部署技能...`,"note");
+        setTimeout(()=>{
+            npcBatchBuy(G.npc[idx], idx);
+            G.deployIndex++;
+            saveGame();
+            renderVisualMapPreview();
+            updateRankPanel();
+            nextDeployTurn();
+        }, 900);
+    }
+}
+
+function finishPlayerDeploy(){
+    if(G.phase !== "deploy") return;
+    const actor = G.deployOrder[G.deployIndex];
+    if(!actor || actor.type !== "player") return;
+    G.currentSelectSkill=null;
+    document.getElementById("curSkillText").innerText="无";
+    document.getElementById("selectPanel").style.display="none";
+    logPlayer(`✅你结束了技能部署（共使用${getDeployedCount()}个）`);
+    G.deployIndex++;
+    nextDeployTurn();
+}
+
+async function startBattle(){
+    try{
+        G.phase = "battle";
+        updateButtonStates();
+        log("=====所有技能部署完毕，对局开始====","info");
+
+        G.gold -= G.playerBet;
+
+        for(let i=0;i<4;i++){
+            const n = G.npc[i];
+            if(!n.betTeam){ n.betVal=0; continue; }
+            n.betVal = weightedBetValue(n.gold);
+            n.gold -= n.betVal;
+            logNpc(i,`🤖NPC${i}投注 ${teamNameMap[n.betTeam]}队，金额${n.betVal}`);
+        }
+
+        updateGoldUI();
+        saveGame();
+
+        boneUsedPlayerList = G.usedSkillList.filter(p=>p.type==="bone").map(()=>false);
+        npcBoneUsedList = G.npc.map(n=>n.preBag.filter(p=>p.type==="bone").map(()=>false));
+
+        map = JSON.parse(JSON.stringify(deployMap));
+        const ids = getActiveTeamIds();
+
+        renderVisualMap();
+
+        for(let step=0;step<G.maxStep;step++){
+            let emptyCnt=0;
+            for(let y=0;y<G.h;y++)for(let x=0;x<G.w;x++){if(map[y][x]===0) emptyCnt++;}
+            if(emptyCnt===0){log("⚠️棋盘已填满，终止扩张","info");break;}
+
+            await new Promise(res=>setTimeout(res,G.stepInterval));
+            log(`---第${step+1}轮扩张---`,"info");
+
+            let candidates=[];
+            for(let y=0;y<G.h;y++){
+                for(let x=0;x<G.w;x++){
+                    if(map[y][x]!==0) continue;
+                    for(let [dx,dy] of dirs){
+                        let nx=x+dx, ny=y+dy;
+                        if(nx>=0&&nx<G.w&&ny>=0&&ny<G.h && map[ny][nx]>0){
+                            candidates.push({x,y,owner:map[ny][nx]});
+                            break;
+                        }
+                    }
+                }
+            }
+            candidates.sort(()=>Math.random()-0.5);
+            const take = Math.floor(Math.random()*candidates.length)+1;
+            const selected = candidates.slice(0,take);
+
+            const occupyQueue = selected.map(s=>({x:s.x,y:s.y,owner:s.owner}));
+            for(let s of selected){
+                map[s.y][s.x] = s.owner;
+            }
+
+            while(occupyQueue.length > 0){
+                const cell = occupyQueue.shift();
+                const {x,y,owner} = cell;
+
+                const playerBoneList = G.usedSkillList.filter(p=>p.type==="bone");
+                for(let bi=0;bi<playerBoneList.length;bi++){
+                    const it=playerBoneList[bi];
+                    if(boneUsedPlayerList[bi]) continue;
+                    const [bx,by]=it.target;
+                    if(x===bx&&y===by&&owner===it.team){
+                        logPlayer("💥你的骨粉触发，额外扩散！");
+                        for(let [dx,dy] of dirs){
+                            let nnx=x+dx,nny=y+dy;
+                            if(nnx>=0&&nnx<G.w&&nny>=0&&nny<G.h&&map[nny][nnx]===0){
+                                map[nny][nnx]=it.team;
+                                occupyQueue.push({x:nnx,y:nny,owner:it.team});
+                            }
+                        }
+                        boneUsedPlayerList[bi]=true;
+                    }
+                }
+
+                for(let ni=0;ni<4;ni++){
+                    const n=G.npc[ni];
+                    if(!n.betTeam) continue;
+                    const nBoneList = n.preBag.filter(p=>p.type==="bone");
+                    for(let bi=0;bi<nBoneList.length;bi++){
+                        const it=nBoneList[bi];
+                        if(npcBoneUsedList[ni][bi]) continue;
+                        const [nbx,nby]=it.target;
+                        if(x===nbx&&y===nby&&owner===it.team){
+                            logNpc(ni,`💥NPC${ni}骨粉触发！`);
+                            for(let [dx,dy] of dirs){
+                                let nnx=x+dx,nny=y+dy;
+                                if(nnx>=0&&nnx<G.w&&nny>=0&&nny<G.h&&map[nny][nnx]===0){
+                                    map[nny][nnx]=it.team;
+                                    occupyQueue.push({x:nnx,y:nny,owner:it.team});
+                                }
+                            }
+                            npcBoneUsedList[ni][bi]=true;
+                        }
+                    }
+                }
+            }
+            renderVisualMap();
+        }
+
+        let cnt={1:0,2:0,3:0,4:0};
+        for(let y=0;y<G.h;y++)for(let x=0;x<G.w;x++){if(map[y][x]>=1)cnt[map[y][x]]++;}
+        log(`📊红:${cnt[1]} 黄:${cnt[2]} 蓝:${cnt[3]} 绿:${cnt[4]}`,"info");
+
+        const activeCnt = ids.map(id=>cnt[id]);
+        const maxV=Math.max(...activeCnt);
+        const playerTeamId=teamInfo[G.playerBetTeam].id;
+
+        const allBetRoles = [{type:"player", teamId:playerTeamId, betVal:G.playerBet}];
+        for(let i=0;i<4;i++){
+            const n=G.npc[i];
+            if(n.betTeam && n.betVal>0) allBetRoles.push({type:"npc", idx:i, teamId:n.betTeam, betVal:n.betVal});
+        }
+
+        // 玩家结算
+        if(cnt[playerTeamId]===maxV){
+            G.gold += G.playerBet * 2;
+            logPlayer(`🏆冠军！双倍回馈，获得${G.playerBet*2}金币（含本金${G.playerBet}，利润${G.playerBet}）`);
+        }else if(isConsolationEligible(playerTeamId, allBetRoles, cnt)){
+            const refund = G.playerBet - 1;
+            if(refund > 0){
+                G.gold += refund;
+                logPlayer(`🥈安慰奖：你的队伍排名高于所有其他对手，返还${refund}金币（净损失1）`);
+            }else{
+                logPlayer(`🥈安慰奖：赌注为1，不返还，净损失1金币`);
+            }
+        }else{
+            logPlayer(`💔押注失败，损失${G.playerBet}金币`);
+        }
+
+        // NPC结算
+        for(let i=0;i<4;i++){
+            const n = G.npc[i];
+            if(!n.betTeam || n.betVal <=0) continue;
+            const nt = n.betTeam;
+            if(cnt[nt] === maxV){
+                n.gold += n.betVal * 2;
+                logNpc(i,`🏆NPC${i}冠军！获得${n.betVal*2}金币（含本金${n.betVal}，利润${n.betVal}）`);
+            }else if(isConsolationEligible(nt, allBetRoles, cnt)){
+                const refund = n.betVal - 1;
+                if(refund > 0){
+                    n.gold += refund;
+                    logNpc(i,`🥈NPC${i}安慰奖：返还${refund}金币（净损失1）`);
+                }else{
+                    logNpc(i,`🥈NPC${i}安慰奖：赌注为1，不返还，净损失1金币`);
+                }
+            }else{
+                logNpc(i,`💔NPC${i}失败，损失${n.betVal}金币`);
+            }
+            if(n.gold < 0) n.gold = 0;
+        }
+
+        G.phase="idle";
+        updateGoldUI();
+        saveGame();
+
+        if(G.gold <= 0){
+            updateButtonStates();
+            alert("您已破产");
+            resetSave();
+            return;
+        }
+        if(G.npc.every(n=>n.gold<=0)){
+            updateButtonStates();
+            alert("你胜利了！所有NPC都已破产！");
+            resetSave();
+            return;
+        }
+
+        G.usedSkillList=[];
+        for(let n of G.npc){ n.preBag=[]; n.betTeam=null; n.betVal=0; }
+        G.mapGenerated=false;
+        G.playerBet=0;
+        updateDeployedCountUI();
+        updateButtonStates();
+    }catch(err){
+        log(`❌对局运行出错：${err.message}`,"lose");
+        G.phase="idle";
+        updateButtonStates();
+    }
+}
+
+/* ========== 初始化 ========== */
+
+loadGame();
+refreshBetTeamOptions();
+document.getElementById("modeText").innerText=`当前：${G.mode}队模式`;
+updateGoldUI();
+updatePlayerBagUI();
+updateDeployedCountUI();
+updateButtonStates();
+if(G.mapGenerated){
+    if(deployMap.length === 0) initDeployMap();
+    renderVisualMapPreview();
+    updateRankPanel();
+}
+</script>
+</body>
+</html>
