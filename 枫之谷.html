@@ -1,0 +1,2919 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>枫之谷</title>
+<style>
+:root{--bg:#f5f7fa;--panel:#fff;--panel2:#eef1f5;--line:#d8dee6;--text:#1f2530;--dim:#6b7684;--gold:#c99a00;--green:#2f9e4f;--blue:#2c6fd1;--purple:#7a3fc0;--red:#d63a3a;--stam:#e08a2a;--rain:#4d8bf0;--snow:#9ad4f5;--sun:#f5c542;--thunder:#7a3fc0}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;display:flex;flex-direction:column;overflow:hidden}
+#topbar{display:flex;align-items:center;gap:12px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);flex:0 0 auto;flex-wrap:wrap}
+.stat{display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:13px}
+.stat b{color:var(--gold);font-size:15px}
+.barWrap{flex:1;max-width:150px;height:16px;background:#d8dee6;border-radius:8px;position:relative;overflow:hidden}
+#xpfill{height:100%;width:0;background:linear-gradient(90deg,#4d8bf0,#a06cf0);transition:width .3s}
+#staminaFill{height:100%;width:100%;background:linear-gradient(90deg,#e08a2a,#f5c542);transition:width .3s}
+.barWrap span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;text-shadow:0 1px 2px #000;font-weight:600}
+.spacer{flex:1}
+#weatherBadge{font-size:12px;padding:2px 8px;border-radius:10px;border:1px solid var(--line);background:var(--panel2)}
+#main{flex:1;display:flex;overflow:hidden;min-height:0}
+#mapWrap{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:14px}
+#map{display:grid;gap:1px;background:#c8d0da;border:1px solid var(--line);border-radius:8px;padding:4px;flex:0 0 auto}
+.cell{width:34px;height:34px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;user-select:none;background:#e8ecf1;transition:transform .08s,background .15s;position:relative}
+.cell:hover{transform:scale(1.07);background:#d0d8e2;z-index:2}
+.cell.empty{background:#e8ecf1}.cell.dirt{background:#b89b6e}.cell.farmland{background:#7a5a30}
+.cell.water{background:#7eb8e0}
+.cell.grass{background:#a8d4a0}.cell.flower{background:#e8ecf1}
+.cell.flower.on-dirt{background:#b89b6e}
+.cell.flower.on-farmland{background:#7a5a30}.cell.tree{background:#8fbf85}.cell.rock{background:#b8bec8}
+.cell.sand{background:#e8d49a}.cell.clay{background:#c8b8a8}
+.cell.sapling{background:#c8d8a0}
+.cell.workbench,.cell.chest,.cell.shop,.cell.artisan,.cell.gacha{background:#e0c888}
+.cell.furnace{background:#c8b088}
+.cell.wish_well{background:#b8d8f0}
+.cell.enchant_low,.cell.enchant_high{background:#c8b0e8}
+.cell.enchant_low.locked,.cell.enchant_high.locked{background:#b8b8c8;color:#666}
+.cell.animal{background:#c0d8a8}
+.cell.animal.hasLove{background:linear-gradient(135deg,#ffe6f0,#f0c8a8)}
+.cell.mutant::after{content:'⚡';position:absolute;top:-2px;left:-2px;font-size:14px;text-shadow:0 0 4px #a06cf0, 0 0 2px #fff;z-index:5;pointer-events:none}
+.cell.merchant{background:#f0c8ff;animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 #a06cf0aa;}50%{box-shadow:0 0 0 6px #a06cf000;}}
+.cell .hpbar{position:absolute;bottom:2px;left:3px;right:3px;height:3px;background:#0003;border-radius:2px;overflow:hidden}
+.cell .hpbar i{display:block;height:100%;background:var(--green)}
+.cell .lovebar{position:absolute;top:1px;left:3px;right:3px;height:2px;background:#0003;border-radius:2px;overflow:hidden}
+.cell .lovebar i{display:block;height:100%;background:#e93d82}
+#sidebar{width:300px;flex:0 0 auto;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;overflow-y:auto}
+.panel{border-bottom:1px solid var(--line);padding:10px 12px}
+.panel h3{margin:0 0 8px;font-size:11px;color:var(--dim);letter-spacing:1.5px;font-weight:600;display:flex;justify-content:space-between}
+.invGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.invItem{aspect-ratio:1;background:var(--panel2);border:1px solid var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;font-size:16px;transition:.12s}
+.invItem:hover{border-color:var(--blue);transform:translateY(-2px)}
+.invItem.sel{border-color:var(--gold);box-shadow:0 0 0 2px #c99a0055}
+.invItem.gold-item{background:linear-gradient(135deg,#fff8e0,#ffe6a0);border-color:var(--gold)}
+.invItem .cnt{position:absolute;bottom:0;right:2px;font-size:10px;text-shadow:0 1px 3px #fff,0 0 3px #fff;color:#1f2530;font-weight:600}
+.invItem .eat{position:absolute;top:-4px;left:-4px;font-size:11px;background:#fff;border:1px solid var(--line);border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.invItem .eat:hover{background:#fff4d6;border-color:var(--gold)}
+.invItem .lock{position:absolute;top:-4px;right:-4px;font-size:10px;width:15px;height:15px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--line);border-radius:50%;cursor:pointer;opacity:0;transition:.12s;z-index:3}
+.invItem:hover .lock{opacity:.75}
+.invItem.locked{box-shadow:inset 0 0 0 2px var(--gold)}
+.invItem.locked .lock{opacity:1;border-color:var(--gold);color:var(--gold)}
+.toolRow{display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:var(--dim)}
+.toolRow b{color:var(--text);font-weight:500}
+.codexRow{display:flex;justify-content:space-between;font-size:12px;padding:3px 0}
+.codexRow span:last-child{color:var(--gold)}
+.taskRow{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:11px}
+.taskRow .tt{display:flex;justify-content:space-between;margin-bottom:3px}
+.taskRow .tb{height:4px;background:#d8dee6;border-radius:2px;overflow:hidden}
+.taskRow .tb i{display:block;height:100%;background:var(--green)}
+.taskRow .tr{color:var(--gold)}
+.taskRow.done{border-color:var(--gold);background:#fff9e6}
+.taskRow .claim{cursor:pointer;color:var(--gold);font-weight:600}
+.btn{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;transition:.12s}
+.btn:hover{background:#e0e6ee;border-color:var(--blue)}
+.btn.gold{border-color:var(--gold);color:var(--gold)}.btn.gold:hover{background:#fff4d6}
+.btn.stam{border-color:var(--stam);color:var(--stam)}.btn.stam:hover{background:#fff1dc}
+.btn.save{border-color:var(--blue);color:var(--blue)}.btn.save:hover{background:#e8eef6}
+.btn.purple{border-color:var(--purple);color:var(--purple)}.btn.purple:hover{background:#f5eeff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+#log{height:100px;flex:0 0 auto;background:var(--panel);border-top:1px solid var(--line);padding:6px 14px;overflow-y:auto;font-size:12px;color:var(--dim);font-family:ui-monospace,monospace}
+#log div{margin-bottom:1px}
+#log .egg-msg{color:#a06cf0;font-weight:600;text-shadow:0 0 8px #a06cf055}
+#log .event-msg{color:#2c6fd1}
+#modal{position:fixed;inset:0;background:#00000055;display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+#modal.hidden{display:none}
+.modalBox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;max-width:720px;max-height:82vh;overflow-y:auto;min-width:400px;box-shadow:0 8px 32px #0002}
+.modalBox h2{margin:0 0 12px;font-size:16px;display:flex;justify-content:space-between;align-items:baseline}
+.modalBox h2 span{font-size:12px;color:var(--dim);font-weight:400}
+.tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--line);padding-bottom:8px}
+.tab{padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;border:1px solid transparent}
+.tab:hover{background:var(--panel2)}
+.tab.active{background:var(--panel2);border-color:var(--blue);color:var(--blue);font-weight:600}
+.craftList{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.craftItem{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:.12s}
+.craftItem:hover{border-color:var(--blue);background:#e8eef6}
+.craftItem.dis{opacity:.45;cursor:not-allowed}
+.craftItem.dis:hover{border-color:var(--line);background:var(--panel2)}
+.craftItem .ci{font-size:22px;flex:0 0 auto}
+.craftItem .cn{flex:1;min-width:0}
+.craftItem .cn b{display:block;font-size:12px;font-weight:500}
+.craftItem .cn small{color:var(--dim);font-size:10px}
+.modalFoot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.saveTextarea{width:100%;height:180px;font-family:ui-monospace,monospace;font-size:11px;padding:8px;border:1px solid var(--line);border-radius:6px;resize:vertical;background:var(--panel2);color:var(--text)}
+.gacha-result{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0}
+.gacha-cell{padding:8px 4px;border:1px solid var(--line);border-radius:8px;text-align:center;font-size:11px;background:var(--panel2)}
+.gacha-cell .gi{font-size:24px;display:block}
+.gacha-cell.t1{border-color:#bbb}
+.gacha-cell.t2{border-color:#4d8bf0;background:#e8f0ff}
+.gacha-cell.t3{border-color:#2f9e4f;background:#eafce8}
+.gacha-cell.t4{border-color:#a06cf0;background:#f5eeff}
+.gacha-cell.t5{border-color:#c99a00;background:linear-gradient(135deg,#fff8e0,#ffe6a0)}
+.gacha-cell.t6{border-color:#e93d82;background:linear-gradient(135deg,#ffe0ee,#ffd0e0);font-weight:600}
+.checkin-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:12px 0}
+.checkin-cell{padding:10px 4px;border:1px solid var(--line);border-radius:6px;text-align:center;font-size:11px;background:var(--panel2)}
+.checkin-cell.done{background:#eafce8;border-color:var(--green)}
+.checkin-cell.today{border-color:var(--gold);box-shadow:0 0 0 2px #c99a0055}
+.checkin-cell .cd{font-size:18px;display:block;margin-bottom:4px}
+.nameColorRow{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.colorSwatch{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);cursor:pointer;transition:.12s}
+.colorSwatch:hover{transform:scale(1.15)}
+.colorSwatch.sel{border-color:#000;box-shadow:0 0 0 2px #fff inset}
+.nameInput{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:14px;background:var(--panel2);color:var(--text);margin:6px 0}
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="stat" id="playerNameBox">🏷️ <b id="playerName">—</b></div>
+  <div class="stat">💰 <b id="coins">0</b></div>
+  <div class="stat">⭐ Lv.<b id="level">1</b></div>
+  <div class="barWrap"><div id="xpfill"></div><span id="xptext">0 / 50</span></div>
+  <div class="stat">⚡ <b id="stamNum">100</b></div>
+  <div class="barWrap" style="max-width:110px"><div id="staminaFill"></div><span id="stamText">100/100</span></div>
+  <div id="weatherBadge">☀️ 晴朗</div>
+  <div class="spacer"></div>
+  <div class="stat" id="toolInfo">⛏️ 木镐</div>
+</header>
+
+<main id="main">
+  <section id="mapWrap"><div id="map"></div></section>
+  <aside id="sidebar">
+    <div class="panel"><h3>背包</h3><div class="invGrid" id="inventory"></div></div>
+    <div class="panel" style="display:flex;gap:6px">
+      <button class="btn stam" id="btnEat" style="flex:1">🍴 进食</button>
+      <button class="btn" id="btnCodex" style="flex:1">📖 图鉴</button>
+    </div>
+    <div class="panel" style="display:flex;gap:6px">
+      <button class="btn save" id="btnSave" style="flex:1">💾 存档</button>
+      <button class="btn purple" id="btnCheckin" style="flex:1">📅 签到</button>
+    </div>
+    <div class="panel" style="display:flex;gap:6px">
+      <button class="btn" id="btnGuide" style="flex:1; border-color:var(--gold); color:var(--gold); font-weight:600;">📜 新手指引</button>
+    </div>
+    <div class="panel"><h3>工具</h3>
+      <div class="toolRow"><span>⛏️ 镐子</span><b id="tPick">木镐</b></div>
+      <div class="toolRow"><span>🪓 斧头</span><b id="tAxe">未拥有</b></div>
+      <div class="toolRow"><span>🎣 鱼竿</span><b id="tRod">未拥有</b></div>
+      <div class="toolRow"><span>🌾 镰刀</span><b id="tSickle">未拥有</b></div>
+      <div style="border-top:1px solid var(--line);margin:6px 0"></div>
+      <div class="toolRow"><span>🔮 低级附魔台</span><b id="tEnchLow">🔒 未解锁</b></div>
+      <div class="toolRow"><span>✨ 高级附魔台</span><b id="tEnchHigh">🔒 未解锁</b></div>
+      <div style="border-top:1px solid var(--line);margin:6px 0"></div>
+      <div class="toolRow"><span>⛏️ 星辰镐</span><b id="tDivinePick">未拥有</b></div>
+      <div class="toolRow"><span>🌾 丰饶锄</span><b id="tDivineHoe">未拥有</b></div>
+      <div class="toolRow"><span>🎣 海神竿</span><b id="tDivineRod">未拥有</b></div>
+      <div class="toolRow"><span>🌌 星辉冠</span><b id="tDivineCrown">未拥有</b></div>
+      <div class="toolRow"><span>☄️ 陨星镐</span><b id="tDivineMeteorPick">未拥有</b></div>
+      <div class="toolRow"><span>☀️ 太阳圣袍</span><b id="tDivineSunRobe">未拥有</b></div>
+    </div>
+    <div class="panel"><h3>每日任务 <span id="dailyDate" style="color:var(--dim);font-weight:400"></span></h3>
+      <div id="dailyTasks"></div>
+    </div>
+    <div class="panel"><h3>图鉴进度</h3><div id="codexSummary"></div></div>
+    <div class="panel" style="display:flex;gap:6px">
+      <button class="btn" id="btnReset" style="flex:1">🔄 重置</button>
+    </div>
+  </aside>
+</main>
+
+<footer id="log"></footer>
+<div id="modal" class="hidden"></div>
+
+<script>
+const COLS=24, ROWS=16, TILE=34;
+const SAVE_KEY = 'bloxd_farm_save';
+const SAVE_VERSION = 21;
+const LEGACY_SAVE_KEYS = ['bloxd_farm_save_v15','bloxd_farm_save_v14','bloxd_farm_save_v13','bloxd_farm_save_v12','bloxd_farm_save_v11','bloxd_farm_save_v10','bloxd_farm_save_v9','bloxd_farm_save_v8','bloxd_farm_save_v7','bloxd_farm_save_v6','bloxd_farm_save_v5','bloxd_farm_save_v4','bloxd_farm_save_v3','bloxd_farm_save_v2','bloxd_farm_save_v1'];
+const NAME_COLORS = ['#1f2530','#d63a3a','#e08a2a','#c99a00','#2f9e4f','#2c6fd1','#7a3fc0','#e93d82'];
+
+const ITEMS = {
+  fiber:{name:'纤维',icon:'🌿',sell:1},
+  stone:{name:'石头',icon:'⛰️',sell:2}, coal:{name:'煤炭',icon:'⬛',sell:10},
+  iron_ore:{name:'铁矿石',icon:'⚪',sell:15}, iron_ingot:{name:'铁锭',icon:'⚙️',sell:30},
+  gold_ore:{name:'金矿石',icon:'🟡',sell:40}, gold_ingot:{name:'金锭',icon:'🥇',sell:80},
+  diamond:{name:'钻石',icon:'💎',sell:220}, moonstone:{name:'月石',icon:'🌙',sell:600},
+  emerald:{name:'绿宝石',icon:'💚',sell:900}, sapphire:{name:'蓝宝石',icon:'🔷',sell:2200},
+  clay:{name:'粘土',icon:'🟫',sell:5}, sand:{name:'沙子',icon:'🟨',sell:4},
+  glass:{name:'玻璃',icon:'💠',sell:12}, terracotta:{name:'陶瓦',icon:'🧱',sell:18},
+  plank:{name:'木板',icon:'🟧',sell:9},
+  iron_bucket:{name:'铁桶',icon:'🛢️',sell:20, color:'#c0c0c0'},
+  water_bucket:{name:'水桶',icon:'🧺',sell:25, color:'#7eb8e0'},
+  egg:{name:'鸡蛋',icon:'🥚',sell:5, food:2}, milk:{name:'牛奶',icon:'🥛',sell:14, food:3},
+  wool:{name:'羊毛',icon:'☁️',sell:6},
+  wheat:{name:'小麦',icon:'🌾',sell:8}, rice:{name:'米',icon:'🍚',sell:10},
+  watermelon_slice:{name:'西瓜片',icon:'🍉',sell:5, food:1},
+  bowl:{name:'碗',icon:'🥣',sell:0, noSell:true},
+  bowl_rice:{name:'碗装大米',icon:'🍚',sell:40, food:12},
+  bowl_rice_gold:{name:'金穗碗装大米',icon:'🍚',sell:120, food:36, color:'#f5c542'},
+  bowl_rice_mutant:{name:'变异碗装大米',icon:'🍚',sell:80, food:24, color:'#a06cf0'},
+  bread:{name:'面包',icon:'🍞',sell:25, food:10},
+  bread_gold:{name:'金穗面包',icon:'🍞',sell:75, food:30, color:'#f5c542'},
+  bread_mutant:{name:'变异面包',icon:'🍞',sell:50, food:20, color:'#a06cf0'},
+  apple:{name:'苹果',icon:'🍎',sell:15, food:3},
+  maple_sapling:{name:'枫树苗',icon:'🌱',sell:15},
+  maple_log:{name:'枫木原木',icon:'🌲',sell:6},
+  wheat_gold:{name:'金穗小麦',icon:'✨',sell:40, color:'#f5c542'},
+  rice_gold:{name:'金穗大米',icon:'✨',sell:50, color:'#f5c542'},
+  watermelon_gold:{name:'金穗西瓜',icon:'✨',sell:25, food:5, color:'#f5c542'},
+  watermelon_mutant:{name:'变异西瓜',icon:'🍉',sell:15, food:3, color:'#a06cf0'},
+  wheat_mutant:{name:'变异小麦',icon:'🌾',sell:24, color:'#a06cf0'},
+  rice_mutant:{name:'变异大米',icon:'🍚',sell:30, color:'#a06cf0'}, 
+  stardust:{name:'星尘',icon:'🌟',sell:5000, egg:true},
+  stardust_fragment:{name:'星尘碎片',icon:'✴️',sell:1000, color:'#f5c542'},
+  iron_watermelon:{name:'铁西瓜',icon:'🌑',sell:8000, color:'#333333'},
+  golden_egg:{name:'金蛋',icon:'🥚',sell:300, color:'#f5c542'},
+  rainbow_wool:{name:'彩虹羊毛',icon:'🌈',sell:200, color:'#e93d82'},
+  fish_small:{name:'小鱼',icon:'🐟',sell:10}, fish_carp:{name:'鲤鱼',icon:'🐠',sell:30},
+  fish_gold:{name:'金鱼',icon:'🐡',sell:90}, fish_legend:{name:'传说鱼',icon:'🐉',sell:400},
+  seed_wheat:{name:'小麦种子',icon:'🌱',sell:4, seed:'wheat'},
+  seed_rice:{name:'大米种子',icon:'🌱',sell:4, seed:'rice'},
+  seed_watermelon:{name:'西瓜种子',icon:'🌱',sell:3, seed:'watermelon'},
+  seed_mystery:{name:'神秘种子',icon:'🍀',sell:0, seed:'wheat', lucky:true, noSell:true},
+};
+
+const PRO_SOURCE = {
+  stone:'pick', coal:'pick', iron_ore:'pick', iron_ingot:'pick',
+  gold_ore:'pick', gold_ingot:'pick', diamond:'pick', moonstone:'pick',
+  emerald:'pick', sapphire:'pick', stardust:'pick',
+  maple_log:'axe', maple_sapling:'axe', apple:'axe',
+  fish_small:'rod', fish_carp:'rod', fish_gold:'rod', fish_legend:'rod',
+};
+
+const FLOWERS = {
+  poppy:{name:'虞美人',icon:'🌺',rarity:1,weight:18},
+  red_tulip:{name:'红郁金香',icon:'🌹',rarity:1,weight:18},
+  orange_tulip:{name:'橙郁金香',icon:'🌼',rarity:2,weight:13},
+  dandelion:{name:'蒲公英',icon:'🌻',rarity:1,weight:18},
+  tallgrass:{name:'高草',icon:'🌿',rarity:1,weight:18},
+  forget_me_not:{name:'勿忘我',icon:'💙',rarity:2,weight:12},
+  bluebell:{name:'蓝铃花',icon:'🔵',rarity:2,weight:12},
+  allium:{name:'葱兰',icon:'💜',rarity:3,weight:8},
+  pink_tulip:{name:'粉郁金香',icon:'🌷',rarity:2,weight:14},
+  white_tulip:{name:'白郁金香',icon:'🤍',rarity:1,weight:18},
+  daisy:{name:'雏菊',icon:'🌼',rarity:1,weight:18},
+  cactus:{name:'仙人掌',icon:'🌵',rarity:2,weight:10},
+};
+
+const FARM_R0 = 7, FARM_R1 = 15, FARM_C0 = 3, FARM_C1 = 11;
+function inFarmArea(r, c){ return r >= FARM_R0 && r <= FARM_R1 && c >= FARM_C0 && c <= FARM_C1; }
+function isNearPlayerMaple(r, c){
+  for (let dr=-1;dr<=1;dr++) for (let dc=-1;dc<=1;dc++){
+    const nr=r+dr, nc=c+dc;
+    if (nr<0||nr>=ROWS||nc<0||nc>=COLS) continue;
+    const d = state.map[nr][nc];
+    if ((d.type === 'sapling' || d.type === 'tree') && (d.planted || d.originalType)) return true;
+  }
+  return false;
+}
+
+const PLANTABLE_FLOWERS = new Set(['poppy','red_tulip','orange_tulip','dandelion','forget_me_not','bluebell','allium','pink_tulip','white_tulip','daisy']);
+const FLOWER_LIMIT_FARM = 5;
+const FLOWER_LIMIT_WILD = 20;
+
+
+const DYE_RECIPES = [
+  {color:'red',name:'红色',flowers:['poppy'],hex:'#e5484d'},
+  {color:'orange',name:'橙色',flowers:['orange_tulip'],hex:'#e07b2a'},
+  {color:'yellow',name:'黄色',flowers:['dandelion'],hex:'#f5d90a'},
+  {color:'lime',name:'黄绿色',flowers:['tallgrass','white_tulip'],hex:'#a3e635'},
+  {color:'green',name:'绿色',flowers:['tallgrass'],hex:'#5ec26a'},
+  {color:'blue',name:'蓝色',flowers:['forget_me_not'],hex:'#4d8bf0'},
+  {color:'light_blue',name:'浅蓝色',flowers:['bluebell'],hex:'#7dd3fc'},
+  {color:'cyan',name:'青色',flowers:['tallgrass','forget_me_not'],hex:'#22d3ee'},
+  {color:'purple',name:'紫色',flowers:['poppy','forget_me_not'],hex:'#8e4ec6'},
+  {color:'magenta',name:'品红色',flowers:['allium'],hex:'#d946ef'},
+  {color:'pink',name:'粉色',flowers:['pink_tulip'],hex:'#e93d82'},
+  {color:'white',name:'白色',flowers:['white_tulip'],hex:'#f0f0f0'},
+  {color:'light_gray',name:'浅灰色',flowers:['white_tulip','daisy'],hex:'#d4d4d8'},
+  {color:'gray',name:'灰色',flowers:['daisy'],hex:'#71717a'},
+  {color:'black',name:'黑色',flowers:['poppy','dandelion','forget_me_not'],hex:'#18181b'},
+  {color:'brown',name:'棕色',flowers:['poppy','tallgrass'],hex:'#8b5e3c'},
+];
+function dyePrice(r){ const n = r.flowers.length; if (n===1) return 12; if (n===2) return 20; if (n===3) return 28; return 12; }
+
+const DYE_BASES = {
+  wool:{name:'羊毛',icon:'☁️',baseItem:'wool'},
+  plank:{name:'木板',icon:'🟧',baseItem:'plank'},
+  glass:{name:'玻璃',icon:'💠',baseItem:'glass'},
+  terracotta:{name:'陶瓦',icon:'🧱',baseItem:'terracotta'},
+};
+for (const [k,v] of Object.entries(FLOWERS)) ITEMS['flower_'+k] = {name:v.name, icon:v.icon, sell:4, rarity:v.rarity};
+for (const r of DYE_RECIPES) ITEMS['dye_'+r.color] = {name:r.name+'染料', icon:'🎨', sell: dyePrice(r), color:r.hex};
+for (const base of Object.keys(DYE_BASES)) for (const r of DYE_RECIPES) {
+  const baseSell = ITEMS[DYE_BASES[base].baseItem]?.sell || 10;
+  ITEMS[`dyed_${base}_${r.color}`] = {name: r.name + DYE_BASES[base].name, icon: DYE_BASES[base].icon, sell: Math.round(baseSell * 2.5 + 20), color: r.hex, dyed: true};
+}
+
+const CROPS = {
+  wheat:{name:'小麦',icon:'🌾',grow:4,yield:[1,2],price:8,seedPrice:4,seedW:30,type:'crop',goldId:'wheat_gold',mutantId:'wheat_mutant'},
+  rice:{name:'米',icon:'🍚',grow:5,yield:[2,3],price:10,seedPrice:4,seedW:20,type:'crop',goldId:'rice_gold',mutantId:'rice_mutant'},
+  watermelon:{name:'西瓜',icon:'🍉',grow:8,yield:[4,4],price:5,seedPrice:3,seedW:10,type:'juicy',goldId:'watermelon_gold',mutantId:'watermelon_mutant'},
+};
+
+const ORES = {
+  stone:{name:'石头',icon:'⛰️',hp:3,req:1,drop:'stone',amt:[1,2],xp:1,respawn:18,reward:20},
+  coal:{name:'煤炭',icon:'⬛',hp:4,req:1,drop:'coal',amt:[1,2],xp:2,respawn:26,reward:45},
+  iron:{name:'铁矿',icon:'⚙️',hp:5,req:2,drop:'iron_ore',amt:[1,1],xp:3,respawn:36,reward:90},
+  gold:{name:'金矿',icon:'🟡',hp:7,req:3,drop:'gold_ore',amt:[1,1],xp:6,respawn:50,reward:220},
+  diamond:{name:'钻石矿',icon:'💎',hp:9,req:3,drop:'diamond',amt:[1,1],xp:12,respawn:75,reward:600},
+  moonstone:{name:'月石矿',icon:'🌙',hp:12,req:3,drop:'moonstone',amt:[1,1],xp:25,respawn:110,reward:1800},
+  emerald:{name:'绿宝石矿',icon:'💚',hp:13,req:5,drop:'emerald',amt:[1,1],xp:20,respawn:150,reward:2500},
+  sapphire:{name:'蓝宝石矿',icon:'🔷',hp:16,req:5,drop:'sapphire',amt:[1,1],xp:40,respawn:200,reward:6000},
+};
+const ORE_WEIGHTS = [['stone',40],['coal',20.5],['iron',17],['gold',14],['diamond',5],['moonstone',2],['emerald',1],['sapphire',0.5]];
+
+const PICKAXES = [null,{name:'木镐',cost:0,dmg:1,req:1},{name:'石镐',cost:120,dmg:2,req:2},{name:'铁镐',cost:450,dmg:3,req:3},{name:'金镐',cost:1500,dmg:5,req:3},{name:'钻石镐',cost:4000,dmg:7,req:3},{name:'月石镐',cost:12000,dmg:10,req:3}];
+const AXES = [null,{name:'木斧',cost:60,dmg:2},{name:'铁斧',cost:200,dmg:4},{name:'钻石斧',cost:500,dmg:8}];
+const RODS = [null,{name:'普通鱼竿',cost:150,miss:0.40,table:[['fish_small',72],['fish_carp',22],['fish_gold',5.5],['fish_legend',0.5]]},{name:'幸运鱼竿',cost:300,miss:0.25,table:[['fish_small',54],['fish_carp',32],['fish_gold',12],['fish_legend',2]]},{name:'欧皇鱼竿',cost:600,miss:0.10,table:[['fish_small',38],['fish_carp',35],['fish_gold',22],['fish_legend',5]]}];
+
+const GACHA_POOL = [
+  {tier:1, weight:40, name:'纤维×5', give:{fiber:5}},
+  {tier:1, weight:40, name:'沙子×5', give:{sand:5}},
+  {tier:1, weight:40, name:'粘土×3', give:{clay:3}},
+  {tier:1, weight:40, name:'苹果×1', give:{apple:1}},
+  {tier:2, weight:30, name:'铁锭×2', give:{iron_ingot:2}},
+  {tier:2, weight:30, name:'金锭×1', give:{gold_ingot:1}},
+  {tier:2, weight:30, name:'小麦×5', give:{wheat:5}},
+  {tier:2, weight:30, name:'木板×3', give:{plank:3}},
+  {tier:3, weight:20, name:'枫树苗×1', give:{maple_sapling:1}},
+  {tier:3, weight:20, name:'西瓜种子×3', give:{seed_watermelon:3}},
+  {tier:3, weight:20, name:'小麦种子×5', give:{seed_wheat:5}},
+  {tier:3, weight:20, name:'大米种子×5', give:{seed_rice:5}},
+  {tier:3, weight:10, name:'小麦种子×3 + 大米种子×3', give:{seed_wheat:3, seed_rice:3}},
+  {tier:4, weight:8, name:'钻石×1', give:{diamond:1}},
+  {tier:4, weight:8, name:'月石×1', give:{moonstone:1}},
+  {tier:4, weight:8, name:'绿宝石×1', give:{emerald:1}},
+  {tier:4, weight:8, name:'蓝宝石×1', give:{sapphire:1}},
+  {tier:5, weight:1.5,name:'传说鱼×1', give:{fish_legend:1}},
+  {tier:5, weight:1.5,name:'金蛋×1', give:{golden_egg:1}},
+  {tier:5, weight:1.2,name:'星尘碎片×1', give:{stardust_fragment:1}},
+  {tier:6, weight:0.5,name:'⚡永久+10体力上限', give:'__stamina_up__'},
+];
+
+const WEATHERS = {
+  sunny:{name:'晴朗', icon:'☀️', color:'#f5c542'},
+  rain:{name:'下雨', icon:'🌧️', color:'#4d8bf0'},
+  thunder:{name:'雷雨', icon:'⛈️', color:'#7a3fc0'},
+  snow:{name:'降雪', icon:'❄️', color:'#9ad4f5'},
+};
+
+const DAILY_EVENTS = [
+  {text:'🍃 清晨的风很温柔，作物生长加快了一点。'},
+  {text:'🐦 一群小鸟飞过农场，留下了一颗种子。', give:{seed_wheat:1}},
+  {text:'🌾 远处的麦田金黄一片，你今天卖东西会多赚一点。', buff:'sell_bonus'},
+  {text:'🐝 蜜蜂在花丛中忙碌，采集花朵的收获 +1。', buff:'flower_bonus'},
+  {text:'🎣 河里的鱼儿似乎特别活跃，钓鱼会更好运。', buff:'fish_bonus'},
+  {text:'⭐ 昨夜的星星特别明亮，你今天运气不错。'},
+  {text:'🌧️ 露水打湿了土地，体力恢复得更快。', buff:'stamina_regen'},
+  {text:'🐱 一只迷路的小猫路过，蹭了蹭你的腿。'},
+  {text:'🍀 你在路边发现了一株四叶草。'},
+  {text:'📖 你想起了小时候爷爷教你种田的样子。'},
+];
+
+const state = {
+  playerName: null, playerNameColor: NAME_COLORS[0],
+  coins: 0, xp: 0, level: 0, stamina: 100, staminaMax: 100,
+  pickaxe: 1, axe: 0, rod: 0, hasSickle: false,
+  tools: {
+    t1:{eff:0,for:0,pro:0}, t2:{eff:0,for:0,pro:0}, t3:{eff:0,for:0,pro:0},
+    t4:{eff:0,for:0,pro:0}, t5:{eff:0,for:0,pro:0}, t6:{eff:0,for:0,pro:0},
+    a1:{eff:0,for:0,pro:0}, a2:{eff:0,for:0,pro:0}, a3:{eff:0,for:0,pro:0},
+    r1:{eff:0,for:0,pro:0}, r2:{eff:0,for:0,pro:0}, r3:{eff:0,for:0,pro:0},
+  },
+  inv: {}, chest: {}, map: [], locked: {},
+  codex: {ore:{},crop:{},dye:{},dyed:{},flower:{},fish:{},rare:{}},
+  selected: null, tick: 0, tasks: [], taskDate: '',
+  hasBowlEver: false, enchLowUnlocked: false, enchHighUnlocked: false,
+  treesChopped: 0, eggsUnlocked: {}, merchant: null,
+  gachaPity: 0, staminaShop: {date:'', count:0},
+  checkin: {lastDate:'', streak:0, weekStart:''},
+  weather: { lastChange: 0, type: 'sunny' },
+  dailyEvent: {date:'', text:'', buff:''},
+  totalStaminaBonus: 0,
+  levelSpeedBonus: 0,
+  levelMilestones: [],
+  xpBonusCarry: 0,
+  divinePick: false, divineHoe: false, divineRod: false,
+  divineCrown: false, divineMeteorPick: false, divineSunRobe: false,
+};
+
+const HARVEST_TYPES = new Set(['grass','flower','tree','rock','sand','clay','dirt','farmland','sapling','animal']);
+const HARVEST_CD = 1000;
+const STAMINA_COST = 2;
+let lastHarvest = 0;
+let lastClick = {r:-1, c:-1, t:0};
+let _isResetting = false;
+
+const pickKey = () => 't' + state.pickaxe;
+const axeKey = () => state.axe ? 'a' + state.axe : null;
+const rodKey = () => state.rod ? 'r' + state.rod : null;
+function getPickEnch(){ return state.tools[pickKey()]; }
+function getAxeEnch(){ return state.tools[axeKey()] || {eff:0,for:0,pro:0}; }
+function getRodEnch(){ return state.tools[rodKey()] || {eff:0,for:0,pro:0}; }
+function getProBonus(id){
+  const src = PRO_SOURCE[id];
+  if (src === 'pick') return getPickEnch().pro * 0.10;
+  if (src === 'axe') return getAxeEnch().pro * 0.10;
+  if (src === 'rod') return getRodEnch().pro * 0.10;
+  return 0;
+}
+
+const $ = id => document.getElementById(id);
+const randInt = (a,b) => a + Math.floor(Math.random()*(b-a+1));
+const def = id => ITEMS[id] || {name:id, icon:'❓', sell:1};
+function weightedPick(pairs){
+  const total = pairs.reduce((s,p)=>s+p[1],0);
+  let r = Math.random()*total;
+  for (const [k,w] of pairs){ if ((r-=w) <= 0) return k; }
+  return pairs[0][0];
+}
+function todayStr(){ const d = new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
+function log(msg, cls){
+  const el = $('log');
+  const d = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = msg;
+  el.prepend(d);
+  while (el.children.length > 80) el.lastChild.remove();
+}
+function logEgg(msg){ log(msg, 'egg-msg'); }
+function logEvent(msg){ log(msg, 'event-msg'); }
+function addItem(id, n=1){ state.inv[id] = (state.inv[id]||0) + n; renderInventory(); }
+function hasItem(id, n=1){ return (state.inv[id]||0) >= n; }
+function removeItem(id, n=1){
+  if (!hasItem(id,n)) return false;
+  state.inv[id] -= n;
+  if (state.inv[id] <= 0) delete state.inv[id];
+  renderInventory(); return true;
+}
+function gainXp(n){
+  const bonus = state.levelSpeedBonus || 0;
+  if (bonus > 0){
+    const boosted = n * (1 + bonus / 100) + (state.xpBonusCarry || 0);
+    n = Math.floor(boosted);
+    state.xpBonusCarry = boosted - n;
+  }
+  state.xp += n;
+  let need = xpNeed();
+  while (state.xp >= need){
+    state.xp -= need;
+    state.level++;
+    log(`🎉 升到 ${state.level} 级！`);
+    checkLevelMilestone();
+    need = xpNeed();
+  }
+  renderTop();
+}
+
+function checkLevelMilestone(){
+  if (state.level % 5 !== 0) return;
+  if (!Array.isArray(state.levelMilestones)) state.levelMilestones = [];
+  if (state.levelMilestones.includes(state.level)) return;
+  state.levelMilestones.push(state.level);
+  state.levelSpeedBonus = (state.levelSpeedBonus || 0) + 1;
+  logEgg(`✨ 等级里程碑 Lv.${state.level}！经验获取速度永久 +1%（当前累计 +${state.levelSpeedBonus}%）`);
+  save();
+}
+const xpNeed = () => Math.floor(50 * Math.pow(state.level + 1, 1.45));
+function hasStamina(cost=STAMINA_COST){ return state.stamina >= cost; }
+function spendStamina(cost=STAMINA_COST){ state.stamina = Math.max(0, state.stamina-cost); renderStamina(); }
+function gainStamina(n){
+  const before = state.stamina;
+  state.stamina = Math.min(state.staminaMax, state.stamina+n);
+  renderStamina();
+  return state.stamina - before;
+}
+function scheduleSpawn(cellType, delayMs, extraData){
+  setTimeout(() => {
+    const empties = [];
+    for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++){
+      if (state.map[r][c] && state.map[r][c].type === 'empty' && !isNearPlayerMaple(r,c)) empties.push([r,c]);
+    }
+    if (!empties.length) return;
+    const [r,c] = empties[Math.floor(Math.random()*empties.length)];
+    state.map[r][c] = makeCell(cellType, extraData);
+    updateCell(r,c);
+  }, delayMs);
+}
+function makeCell(type, extra={}){
+  return Object.assign({type, variant:null, hp:0, maxHp:0, crop:null, respawn:0, animal:null, saplingStage:0, saplingCounter:0, saplingSpeed:'normal', feedCd:0, originalType:null, love:0, loveFed:''}, extra);
+}
+function genMap(){
+  const m = [];
+  for (let r=0;r<ROWS;r++){ const row = []; for (let c=0;c<COLS;c++) row.push(makeCell('empty')); m.push(row); }
+  for (let r=7;r<=15;r++) for (let c=3;c<=11;c++) m[r][c] = makeCell('dirt');
+  let riverC = 19;
+  for (let r=0;r<ROWS;r++){
+    riverC += randInt(-1,1);
+    riverC = Math.max(15, Math.min(19, riverC));
+    const width = Math.random() < 0.45 ? 4 : 3;
+    for (let w=0;w<width;w++){ const cc = riverC + w; if (cc < 0 || cc >= COLS) continue; m[r][cc] = Math.random() < 0.3 ? makeCell('clay') : makeCell('water'); }
+    if (riverC-1 >= 0 && m[r][riverC-1].type === 'empty') m[r][riverC-1] = makeCell('sand');
+    const right = riverC + width;
+    if (right < COLS && m[r][right].type === 'empty') m[r][right] = makeCell('sand');
+  }
+  m[5][3]=makeCell('workbench'); m[5][4]=makeCell('artisan'); m[5][5]=makeCell('chest');
+  m[5][6]=makeCell('shop'); m[5][7]=makeCell('furnace'); m[5][8]=makeCell('enchant_low');
+m[5][9]=makeCell('enchant_high');
+m[2][1]=makeCell('gacha'); m[2][23]=makeCell('wish_well');
+  m[6][3]=makeCell('animal', {animal:'chicken'}); m[6][4]=makeCell('animal', {animal:'cow'}); m[6][5]=makeCell('animal', {animal:'sheep'});
+  const flowerPairs = Object.entries(FLOWERS).map(([k,v])=>['flower_'+k, v.weight]);
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++){
+    if (m[r][c].type !== 'empty') continue;
+    const roll = Math.random();
+    if (roll < 0.08) m[r][c] = makeCell('tree', {hp:16, maxHp:16});
+    else if (roll < 0.22) m[r][c] = makeCell('grass');
+    else if (roll < 0.35) m[r][c] = makeCell('flower', {variant: weightedPick(flowerPairs).replace('flower_','')});
+    else if (roll < 0.46){ const o = weightedPick(ORE_WEIGHTS); m[r][c] = makeCell('rock', {variant:o, hp:ORES[o].hp, maxHp:ORES[o].hp}); }
+  }
+  state.map = m;
+}
+
+const cellEls = [];
+function buildMapDom(){
+  const map = $('map');
+  map.innerHTML = '';
+  map.style.gridTemplateColumns = `repeat(${COLS}, ${TILE}px)`;
+  cellEls.length = 0;
+  for (let r=0;r<ROWS;r++){
+    const row = [];
+    for (let c=0;c<COLS;c++){
+      const d = document.createElement('div');
+      d.className = 'cell'; d.dataset.r = r; d.dataset.c = c;
+      map.appendChild(d); row.push(d);
+    }
+    cellEls.push(row);
+  }
+  renderMapAll();
+}
+function cellIcon(d){
+  switch (d.type){
+    case 'grass': return '🌿';
+    case 'flower': return FLOWERS[d.variant]?.icon || '🌼';
+    case 'tree': return '🌳';
+    case 'rock': return ORES[d.variant]?.icon || '⛰️';
+    case 'water': return '🌊'; case 'sand': return '🟨'; case 'clay': return '🟫';
+    case 'workbench': return '🛠️'; case 'artisan': return '🎨'; case 'chest': return '📦';
+    case 'wish_well': return '⛲';
+    case 'shop': return '🏪'; case 'furnace': return '🔥'; case 'gacha': return '🎰';
+    case 'enchant_low': return state.enchLowUnlocked ? '🔮' : '🔒';
+    case 'enchant_high': return state.enchHighUnlocked ? '✨' : '🔒';
+    case 'animal': return d.animal==='chicken'?'🐔':d.animal==='cow'?'🐄':d.animal==='sheep'?'🐑':'🐾';
+    case 'merchant': return '🧙';
+    case 'sapling': return d.saplingStage >= 1 ? '🌿' : '🌱';
+    case 'dirt': case 'farmland':
+      if (d.crop){
+        if (!d.crop.watered) return '💧';
+        if (d.crop.lucky) {
+          return d.crop.stage >= CROPS[d.crop.id].grow ? '🎁' : '🍀';
+        }
+        const cd = CROPS[d.crop.id];
+        const p = d.crop.stage / cd.grow;
+        const baseIcon = p >= 1 ? cd.icon : (p > 0.5 ? '🌿' : '🌱');
+        return baseIcon;
+      }
+      return '';
+    default: return '';
+  }
+}
+function updateCell(r,c){
+  if (!cellEls[r]) return;
+  const d = state.map[r][c];
+  const el = cellEls[r][c];
+  if (!el) return;
+  let cls = 'cell ' + d.type;
+  if (d.type === 'flower' && d.originalType) cls += ' on-' + d.originalType;
+  if (d.type === 'enchant_low' && !state.enchLowUnlocked) cls += ' locked';
+  if (d.type === 'enchant_high' && !state.enchHighUnlocked) cls += ' locked';
+  if (d.type === 'animal' && d.love >= 5) cls += ' hasLove';
+  if ((d.type === 'dirt' || d.type === 'farmland') && d.crop && d.crop.mutant) cls += ' mutant';
+  el.className = cls;
+  el.textContent = cellIcon(d);
+  if (d.type === 'dirt' || d.type === 'farmland'){
+    if (d.crop && d.crop.mutant) el.style.boxShadow = 'inset 0 0 0 2px #a06cf0, 0 0 6px #a06cf088';
+    else if (d.crop && d.crop.lucky) el.style.boxShadow = 'inset 0 0 0 2px #f5c542, 0 0 6px #f5c54288';
+    else el.style.boxShadow = '';
+  }
+  el.querySelector('.hpbar')?.remove();
+  el.querySelector('.lovebar')?.remove();
+  if ((d.type === 'rock' || d.type === 'tree') && d.hp < d.maxHp && d.maxHp > 0){
+    const bar = document.createElement('div'); bar.className = 'hpbar';
+    const i = document.createElement('i'); i.style.width = (d.hp / d.maxHp * 100) + '%';
+    bar.appendChild(i); el.appendChild(bar);
+  }
+  if (d.type === 'animal' && d.love > 0){
+    const bar = document.createElement('div'); bar.className = 'lovebar';
+    const i = document.createElement('i'); i.style.width = Math.min(100, d.love / 5 * 100) + '%';
+    bar.appendChild(i); el.appendChild(bar);
+  }
+}
+function renderMapAll(){ for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) updateCell(r,c); }
+
+function renderTop(){
+  $('coins').textContent = state.coins;
+  $('level').textContent = state.level;
+  const need = xpNeed();
+  $('xpfill').style.width = Math.min(100, state.xp / need * 100) + '%';
+  $('xptext').textContent = `${state.xp} / ${need}`;
+  $('toolInfo').textContent = '⛏️ ' + PICKAXES[state.pickaxe].name;
+  $('tPick').textContent = PICKAXES[state.pickaxe].name;
+  $('tAxe').textContent = state.axe ? AXES[state.axe].name : '未拥有';
+  $('tRod').textContent = state.rod ? RODS[state.rod].name : '未拥有';
+  $('tSickle').textContent = state.hasSickle ? '已拥有' : '未拥有';
+  $('tEnchLow').textContent = state.enchLowUnlocked ? '✅ 已解锁' : '🔒 未解锁';
+  $('tEnchHigh').textContent = state.enchHighUnlocked ? '✅ 已解锁' : '🔒 未解锁';
+  $('tDivinePick').textContent = state.divinePick ? '✅ 已拥有' : '未拥有';
+  $('tDivineHoe').textContent = state.divineHoe ? '✅ 已拥有' : '未拥有';
+  $('tDivineRod').textContent = state.divineRod ? '✅ 已拥有' : '未拥有';
+  $('tDivineCrown').textContent = state.divineCrown ? '✅ 已拥有' : '未拥有';
+  $('tDivineMeteorPick').textContent = state.divineMeteorPick ? '✅ 已拥有' : '未拥有';
+  $('tDivineSunRobe').textContent = state.divineSunRobe ? '✅ 已拥有' : '未拥有';
+  const nameEl = $('playerName');
+  if (state.playerName){ nameEl.textContent = state.playerName; nameEl.style.color = state.playerNameColor; }
+  else nameEl.textContent = '未设置';
+  const w = WEATHERS[state.weather.type] || WEATHERS.sunny;
+  $('weatherBadge').textContent = `${w.icon} ${w.name}`;
+  $('weatherBadge').style.borderColor = w.color;
+}
+function renderStamina(){
+  const pct = state.stamina / state.staminaMax * 100;
+  $('staminaFill').style.width = pct + '%';
+  $('stamText').textContent = `${state.stamina}/${state.staminaMax}`;
+  $('stamNum').textContent = state.stamina;
+}
+function renderInventory(){
+  const box = $('inventory');
+  box.innerHTML = '';
+  const entries = Object.entries(state.inv).filter(([,n]) => n > 0);
+  if (!entries.length){ box.innerHTML = '<div style="color:var(--dim);font-size:12px">空空如也…</div>'; return; }
+  for (const [id,n] of entries){
+    const it = def(id);
+    const isLocked = !!state.locked[id];
+    const canLock = it.sell >= 1 && !it.noSell;   // 只有可卖的物品才显示锁
+    const el = document.createElement('div');
+    el.className = 'invItem'
+      + (state.selected === id ? ' sel' : '')
+      + (id.endsWith('_gold') ? ' gold-item' : '')
+      + (isLocked ? ' locked' : '');
+    el.title = `${it.name} ×${n}${it.food?`（+${it.food}⚡）`:''}${it.noSell?'（不可出售）':''}${it.egg?' ★彩蛋物品':''}${isLocked?' 🔒 已上锁':''}`;
+    el.innerHTML = `<span>${it.icon}</span><span class="cnt">${n}</span>`;
+    if (it.color) el.style.background = it.color + '33';
+    if (it.egg) el.style.boxShadow = '0 0 8px #a06cf0';
+    el.onclick = (e) => {
+      if (e.target.classList.contains('eat')) return;
+      if (e.target.classList.contains('lock')) return;
+      onInvClick(id);
+    };
+        const canPlantThis = id.startsWith('flower_') && PLANTABLE_FLOWERS.has(id.replace('flower_',''));
+    const isSelectable = it.seed || id === 'maple_sapling' || id === 'iron_bucket' || id === 'water_bucket' || canPlantThis;
+    const isSellable = it.sell >= 1 && !it.noSell && id !== 'iron_bucket' && id !== 'water_bucket';
+    if (isSelectable && isSellable){
+      const sellBtn = document.createElement('div');
+      sellBtn.className = 'eat';
+      sellBtn.textContent = '💰';
+      sellBtn.title = '出售 1 个';
+      sellBtn.onclick = (e) => { e.stopPropagation(); sellOne(id); };
+      el.appendChild(sellBtn);
+    }
+    if (it.food){
+      const eatBtn = document.createElement('div');
+      eatBtn.className = 'eat'; eatBtn.textContent = '🍴';
+      eatBtn.onclick = (e) => { e.stopPropagation(); eatItem(id); };
+      el.appendChild(eatBtn);
+    }
+    if (canLock){
+      const lockBtn = document.createElement('div');
+      lockBtn.className = 'lock';
+      lockBtn.textContent = isLocked ? '🔒' : '🔓';
+      lockBtn.onclick = (e) => {
+        e.stopPropagation();
+        state.locked[id] = !state.locked[id];
+        if (!state.locked[id]) delete state.locked[id];
+        renderInventory();
+        log(state.locked[id] ? `🔒 已上锁：${it.name}（不会在出售时被卖掉）` : `🔓 已解锁：${it.name}`);
+        save();
+      };
+      el.appendChild(lockBtn);
+    }
+    box.appendChild(el);
+  }
+}
+function renderCodexSummary(){
+  const total = {
+    ore: Object.keys(ORES).length,
+    crop: Object.keys(CROPS).length + 13,
+    flower: Object.keys(FLOWERS).length,
+    fish: 4,
+    rare: 5,
+    dye: DYE_RECIPES.length,
+    dyed: Object.keys(DYE_BASES).length * DYE_RECIPES.length,
+  };
+  const got = {
+    ore: Object.keys(state.codex.ore).length,
+    crop: Object.keys(state.codex.crop).length,
+    flower: Object.keys(state.codex.flower).length,
+    fish: Object.keys(state.codex.fish || {}).length,
+    rare: Object.keys(state.codex.rare || {}).length,
+    dye: Object.keys(state.codex.dye).length,
+    dyed: Object.keys(state.codex.dyed).length,
+  };
+  const rows = [
+    ['⛏️ 矿石', got.ore, total.ore],
+    ['🌾 作物', got.crop, total.crop],
+    ['🌸 花朵', got.flower, total.flower],
+    ['🐟 鱼类', got.fish, total.fish],
+    ['🌟 稀有', got.rare, total.rare],
+    ['🎨 染料', got.dye, total.dye],
+    ['🧵 染色物', got.dyed, total.dyed],
+  ];
+  $('codexSummary').innerHTML = rows.map(([n,g,t]) =>
+    `<div class="codexRow"><span>${n}</span><span>${g} / ${t}</span></div>`
+  ).join('') + `<div class="codexRow" style="margin-top:6px;border-top:1px solid var(--line);padding-top:6px">
+    <span>总进度</span><span>${got.ore+got.crop+got.flower+got.fish+got.rare+got.dye+got.dyed} / ${total.ore+total.crop+total.flower+total.fish+total.rare+total.dye+total.dyed}</span></div>`;
+}
+function renderAll(){ renderTop(); renderStamina(); renderInventory(); renderCodexSummary(); renderDailyTasks(); }
+
+function sellOne(id){
+  const it = def(id);
+  if (state.locked[id]){ log(`🔒 ${it.name} 已上锁，先解锁才能出售`); return; }
+  if (!hasItem(id, 1)) return;
+  removeItem(id, 1);
+  let price = it.sell;
+  const proBonus = getProBonus(id);
+  if (proBonus > 0) price = Math.floor(price * (1 + proBonus));
+  if (state.dailyEvent.buff === 'sell_bonus') price = Math.floor(price * 1.2);
+  if (state.divineSunRobe) price = Math.floor(price * 1.5);
+  state.coins += price;
+  progressTask('sell');
+  log(`💵 卖出 ${it.name} +${price}💰`);
+  renderTop(); renderInventory();
+}
+
+
+function eatItem(id){
+  const it = def(id);
+  if (!it.food){ log(`❌ ${it.name} 不能食用`); return; }
+  if (state.stamina >= state.staminaMax){ log('⚡ 体力已满'); return; }
+  if (!hasItem(id,1)) return;
+  removeItem(id,1);
+  const real = gainStamina(it.food);
+  gainXp(1);
+  if (id === 'bowl_rice' || id === 'bowl_rice_gold' || id === 'bowl_rice_mutant'){
+    log(`🍴 食用碗装大米，恢复 ${real} 点体力（碗未被消耗）`);
+  } else {
+    log(`🍴 食用 ${it.name}，恢复 ${real} 点体力`);
+  }
+  renderAll();
+}
+function openEatMenu(){
+  const foods = Object.entries(state.inv).filter(([id,n]) => n > 0 && def(id).food).map(([id,n]) => {
+    const it = def(id);
+    return `<div class="craftItem" data-food="${id}"><div class="ci">${it.icon}</div><div class="cn"><b>${it.name} ×${n}</b><small>恢复 ${it.food} ⚡ 体力</small></div></div>`;
+  }).join('');
+  const html = foods || `<div style="color:var(--dim);padding:24px;text-align:center">还没有食物</div>`;
+  openModal(`<h2>🍴 进食<span>当前体力：${state.stamina} / ${state.staminaMax} ⚡</span></h2><div class="craftList">${html}</div><div class="modalFoot"><button class="btn" id="mClose">关闭</button></div>`,
+    m => { m.querySelector('#mClose').onclick = closeModal; m.querySelectorAll('.craftItem[data-food]').forEach(el => { el.onclick = () => { eatItem(el.dataset.food); if (state.stamina < state.staminaMax) openEatMenu(); else closeModal(); }; }); });
+}
+
+const TASK_POOL = [
+  {id:'mine_stone',name:'挖掘石头',target:10,reward:{coins:50,xp:10},type:'mine',key:'stone'},
+  {id:'mine_coal',name:'挖掘煤炭',target:5,reward:{coins:80,xp:15},type:'mine',key:'coal'},
+  {id:'mine_iron',name:'挖掘铁矿',target:3,reward:{coins:120,xp:20},type:'mine',key:'iron'},
+  {id:'pick_flower',name:'采集花朵',target:5,reward:{coins:60,xp:12},type:'pick_flower'},
+  {id:'chop_tree',name:'砍伐树木',target:2,reward:{coins:70,xp:15},type:'chop'},
+  {id:'harvest_crop',name:'收获作物',target:3,reward:{coins:90,xp:18},type:'harvest'},
+  {id:'sell_item',name:'出售物品',target:5,reward:{coins:40,xp:8},type:'sell'},
+  {id:'craft_item',name:'合成物品',target:2,reward:{coins:60,xp:12},type:'craft'},
+  {id:'fish',name:'钓鱼',target:2,reward:{coins:100,xp:20},type:'fish'},
+  {id:'feed_animal',name:'喂养动物',target:3,reward:{coins:50,xp:10},type:'feed'},
+  {id:'dye_item',name:'染色',target:1,reward:{coins:80,xp:15},type:'dye'},
+  {id:'gacha',name:'扭蛋抽奖',target:3,reward:{coins:80,xp:15},type:'gacha'},
+];
+function genDailyTasks(){
+  const today = todayStr();
+  if (state.taskDate === today && state.tasks.length === 3) return;
+  state.taskDate = today;
+  const pool = [...TASK_POOL].sort(()=>Math.random()-0.5);
+  state.tasks = pool.slice(0,3).map(t => ({...t, progress:0, claimed:false}));
+  save();
+}
+function renderDailyTasks(){
+  const box = $('dailyTasks');
+  $('dailyDate').textContent = state.taskDate || '';
+  if (!state.tasks.length){ box.innerHTML = '<div style="color:var(--dim);font-size:11px">加载中…</div>'; return; }
+  box.innerHTML = state.tasks.map((t,i) => {
+    const done = t.progress >= t.target;
+    const pct = Math.min(100, t.progress/t.target*100);
+    return `<div class="taskRow ${done?'done':''}"><div class="tt"><span>${t.name}</span><span>${t.progress}/${t.target} ${done && !t.claimed ? '<span class="claim" data-idx="'+i+'">领取</span>' : done ? '✅' : ''}</span></div><div class="tb"><i style="width:${pct}%"></i></div><div class="tr">奖励：💰${t.reward.coins} ⭐${t.reward.xp}</div></div>`;
+  }).join('');
+  box.querySelectorAll('.claim').forEach(el => {
+    el.onclick = () => {
+      const t = state.tasks[+el.dataset.idx];
+      if (!t || t.claimed || t.progress < t.target) return;
+      t.claimed = true;
+      state.coins += t.reward.coins;
+      gainXp(t.reward.xp);
+      log(`📋 完成任务「${t.name}」 +${t.reward.coins}💰 +${t.reward.xp}⭐`);
+      renderAll(); save();
+    };
+  });
+}
+function progressTask(type, key){
+  for (const t of state.tasks){
+    if (t.claimed) continue;
+    if (t.type === type && (!t.key || t.key === key)){ t.progress++; renderDailyTasks(); }
+  }
+}
+
+const CODEX_REWARD = {
+  ore: id => ORES[id]?.reward ?? 30,
+  crop: id => ({wheat:30,rice:50,watermelon:80,maple:200,bowl_rice:150,bread:100,wheat_gold:120,rice_gold:150,watermelon_gold:120,wheat_mutant:150,rice_mutant:180,watermelon_mutant:150,bread_gold:200,bread_mutant:150,bowl_rice_gold:250,bowl_rice_mutant:200}[id] ?? 50),
+  dye: id => { const r = DYE_RECIPES.find(x=>x.color===id); return r ? 40*(r.flowers.length) : 60; },
+  dyed: id => 80 * (id.split('_').length),
+  flower: id => {
+    const key = id.replace('flower_', '');
+    const f = FLOWERS[key];
+    return f ? 20 * f.rarity : 20;
+  },
+  fish: id => ({fish_small:30, fish_carp:60, fish_gold:150, fish_legend:500}[id] ?? 50),
+  rare: id => ({stardust:2000, iron_watermelon:1500, golden_egg:150, rainbow_wool:120, stardust_fragment:80}[id] ?? 50),
+};
+const CODEX_LABEL = { ore:'矿石', crop:'作物', dye:'染料', dyed:'染色物' };
+function getCodexName(cat, id) {
+  if (cat === 'ore') return ORES[id]?.name || def(id).name;
+  if (cat === 'crop') {
+    if (id === 'maple') return '枫树';
+    if (id === 'watermelon') return '西瓜';
+    return CROPS[id]?.name || def(id).name;
+  }
+  if (cat === 'dye') {
+    const r = DYE_RECIPES.find(x => x.color === id);
+    return r ? r.name + '染料' : def(id).name;
+  }
+  return def(id).name;
+}
+function unlockCodex(cat, id){
+  if (state.codex[cat][id]) return false;
+  state.codex[cat][id] = true;
+  const reward = CODEX_REWARD[cat](id);
+  state.coins += reward;
+  log(`📖 图鉴解锁 · ${CODEX_LABEL[cat]}「${getCodexName(cat, id)}」 +${reward}💰`);
+  renderAll(); return true;
+}
+
+function defaultTools(){ return {t1:{eff:0,for:0,pro:0},t2:{eff:0,for:0,pro:0},t3:{eff:0,for:0,pro:0},t4:{eff:0,for:0,pro:0},t5:{eff:0,for:0,pro:0},t6:{eff:0,for:0,pro:0},a1:{eff:0,for:0,pro:0},a2:{eff:0,for:0,pro:0},a3:{eff:0,for:0,pro:0},r1:{eff:0,for:0,pro:0},r2:{eff:0,for:0,pro:0},r3:{eff:0,for:0,pro:0}}; }
+function defaultCodex(){ return {ore:{},crop:{},dye:{},dyed:{},flower:{},fish:{},rare:{}}; }
+function sanitizeCell(cell){
+  const c = Object.assign({type:'empty', variant:null, hp:0, maxHp:0, crop:null, respawn:0, animal:null, saplingStage:0, saplingCounter:0, saplingSpeed:'normal', feedCd:0, originalType:null, love:0, loveFed:'', planted:false}, cell || {});
+  if (c.crop && typeof c.crop === 'object'){
+    c.crop.mutant = !!c.crop.mutant;
+    c.crop.lucky = !!c.crop.lucky;
+  }
+  return c;
+}
+function sanitizeSaveData(d){
+  if (!d || typeof d !== 'object') return null;
+  const out = {};
+  out.playerName = typeof d.playerName === 'string' ? d.playerName : null;
+  out.playerNameColor = typeof d.playerNameColor === 'string' ? d.playerNameColor : NAME_COLORS[0];
+  out.coins = typeof d.coins === 'number' && isFinite(d.coins) ? d.coins : 0;
+out.xp = typeof d.xp === 'number' && isFinite(d.xp) ? d.xp : 0;
+out.level = typeof d.level === 'number' && isFinite(d.level) ? d.level : 0;
+out.stamina = typeof d.stamina === 'number' && isFinite(d.stamina) ? d.stamina : 100;
+out.staminaMax = typeof d.staminaMax === 'number' && isFinite(d.staminaMax) ? d.staminaMax : 100;
+  out.pickaxe = typeof d.pickaxe === 'number' ? d.pickaxe : 1;
+  out.axe = typeof d.axe === 'number' ? d.axe : 0;
+  out.rod = typeof d.rod === 'number' ? d.rod : 0;
+  out.hasSickle = !!d.hasSickle;
+  const tools = defaultTools();
+  if (d.tools && typeof d.tools === 'object'){
+    for (const k of Object.keys(tools)){
+      const t = d.tools[k];
+      if (t && typeof t === 'object') tools[k] = {eff: typeof t.eff === 'number' ? t.eff : 0, for: typeof t.for === 'number' ? t.for : 0, pro: typeof t.pro === 'number' ? t.pro : 0};
+    }
+  }
+  out.tools = tools;
+  out.locked = d.locked && typeof d.locked === 'object' ? d.locked : {};
+out.chest  = d.chest  && typeof d.chest  === 'object' ? {...d.chest}  : {};
+  out.inv = d.inv && typeof d.inv === 'object' ? d.inv : {};
+  const INV_FIX = { 'rice_seed':'seed_rice', 'wheat_seed':'seed_wheat', 'watermelon_seed':'seed_watermelon' };
+  for (const [bad, good] of Object.entries(INV_FIX)){
+    if (out.inv[bad]){ out.inv[good] = (out.inv[good]||0) + out.inv[bad]; delete out.inv[bad]; }
+    if (out.chest[bad]){ out.chest[good] = (out.chest[good]||0) + out.chest[bad]; delete out.chest[bad]; }
+  }
+  delete out.inv.ench_low; delete out.inv.ench_high; delete out.chest.ench_low; delete out.chest.ench_high;
+  delete out.inv.wood; delete out.chest.wood;
+  for (const k of Object.keys(out.chest)){ if (k.startsWith('dyed_')){ if (out.chest[k] > 1) out.chest[k] = 1; if (out.chest[k] < 1) delete out.chest[k]; } }
+  const codex = defaultCodex();
+  if (d.codex && typeof d.codex === 'object')    for (const cat of ['ore','crop','dye','dyed','flower','fish','rare']) if (d.codex[cat] && typeof d.codex[cat] === 'object') codex[cat] = d.codex[cat];
+  // 迁移：把误塞进 crop 的鱼移到 fish
+  const FISH_IDS = ['fish_small','fish_carp','fish_gold','fish_legend'];
+  for (const f of FISH_IDS){
+    if (codex.crop[f]){
+      codex.fish[f] = true;
+      delete codex.crop[f];
+    }
+  }
+  out.codex = codex;
+  out.tasks = Array.isArray(d.tasks) ? d.tasks : [];
+  out.taskDate = typeof d.taskDate === 'string' ? d.taskDate : '';
+  out.hasBowlEver = !!d.hasBowlEver;
+  out.enchLowUnlocked = !!d.enchLowUnlocked;
+  out.enchHighUnlocked = !!d.enchHighUnlocked;
+  out.treesChopped = typeof d.treesChopped === 'number' ? d.treesChopped : 0;
+  out.eggsUnlocked = d.eggsUnlocked && typeof d.eggsUnlocked === 'object' ? d.eggsUnlocked : {};
+  out.merchant = d.merchant || null;
+  out.gachaPity = typeof d.gachaPity === 'number' ? d.gachaPity : 0;
+  out.staminaShop = d.staminaShop && typeof d.staminaShop === 'object' ? d.staminaShop : {date:'', count:0};
+  out.checkin = d.checkin && typeof d.checkin === 'object' ? d.checkin : {lastDate:'', streak:0, weekStart:''};
+    if (d.weather && typeof d.weather === 'object'){
+    const wType = WEATHERS[d.weather.type] ? d.weather.type : 'sunny';
+    const wLast = (typeof d.weather.lastChange === 'number' && isFinite(d.weather.lastChange)) ? d.weather.lastChange : 0;
+    out.weather = { lastChange: wLast, type: wType };
+  } else {
+    out.weather = { lastChange: 0, type: 'sunny' };
+  }
+  out.dailyEvent = d.dailyEvent && typeof d.dailyEvent === 'object' ? d.dailyEvent : {date:'', text:'', buff:''};
+  out.totalStaminaBonus = typeof d.totalStaminaBonus === 'number' ? d.totalStaminaBonus : 0;
+  out.levelSpeedBonus = typeof d.levelSpeedBonus === 'number' && isFinite(d.levelSpeedBonus) ? Math.max(0, d.levelSpeedBonus) : 0;
+  out.levelMilestones = Array.isArray(d.levelMilestones) ? d.levelMilestones.filter(x => typeof x === 'number' && x > 0 && x % 5 === 0) : [];
+  out.xpBonusCarry = typeof d.xpBonusCarry === 'number' && isFinite(d.xpBonusCarry) ? d.xpBonusCarry : 0;
+  out.divinePick = !!d.divinePick; out.divineHoe = !!d.divineHoe; out.divineRod = !!d.divineRod;
+  out.divineCrown = !!d.divineCrown; out.divineMeteorPick = !!d.divineMeteorPick;   out.divineSunRobe = !!d.divineSunRobe;
+  if (!out.hasBowlEver && (out.inv.bowl || out.inv.bowl_rice)) out.hasBowlEver = true;
+  if (out.codex.ore && out.codex.ore.stardust){
+    out.codex.rare.stardust = true;
+    delete out.codex.ore.stardust;
+  }
+  if (!Array.isArray(d.map) || d.map.length !== ROWS) out.map = null;
+  else {
+    let ok = true;
+    const grid = d.map.map(row => { if (!Array.isArray(row) || row.length !== COLS){ ok = false; return null; } return row.map(cell => sanitizeCell(cell)); });
+    out.map = ok ? grid : null;
+  }
+  return out;
+}
+function migrateSave(){
+  if (localStorage.getItem(SAVE_KEY)) return null;
+  for (const key of LEGACY_SAVE_KEYS){
+    const raw = localStorage.getItem(key);
+    if (!raw) continue;
+    try { const d = JSON.parse(raw); const clean = sanitizeSaveData(d); if (!clean) continue; clean._version = SAVE_VERSION; clean._migratedFrom = key; localStorage.setItem(SAVE_KEY, JSON.stringify(clean)); return { from: key, version: d._version || '未知' }; } catch(e){ continue; }
+  }
+  return null;
+}
+function buildSaveData(){
+  return {
+    _version: SAVE_VERSION,
+    playerName: state.playerName, playerNameColor: state.playerNameColor,
+    coins: state.coins, xp: state.xp, level: state.level,
+    stamina: state.stamina, staminaMax: state.staminaMax,
+    pickaxe: state.pickaxe, axe: state.axe, rod: state.rod, hasSickle: state.hasSickle,
+    tools: state.tools,
+    inv: state.inv, chest: state.chest, codex: state.codex, locked: state.locked || {},
+    tasks: state.tasks, taskDate: state.taskDate,
+    hasBowlEver: state.hasBowlEver,
+    enchLowUnlocked: state.enchLowUnlocked, enchHighUnlocked: state.enchHighUnlocked,
+    treesChopped: state.treesChopped, eggsUnlocked: state.eggsUnlocked, merchant: state.merchant,
+    gachaPity: state.gachaPity, staminaShop: state.staminaShop, checkin: state.checkin,
+    weather: state.weather, dailyEvent: state.dailyEvent, totalStaminaBonus: state.totalStaminaBonus,
+    levelSpeedBonus: state.levelSpeedBonus,
+    levelMilestones: state.levelMilestones,
+    xpBonusCarry: state.xpBonusCarry,
+    divinePick: state.divinePick, divineHoe: state.divineHoe, divineRod: state.divineRod,
+    divineCrown: state.divineCrown, divineMeteorPick: state.divineMeteorPick, divineSunRobe: state.divineSunRobe,
+    map: state.map.map(row => row.map(cell => {
+      const o = {type:cell.type};
+      if (cell.variant) o.variant = cell.variant; if (cell.hp) o.hp = cell.hp; if (cell.maxHp) o.maxHp = cell.maxHp;
+      if (cell.crop) o.crop = cell.crop; if (cell.animal) o.animal = cell.animal; if (cell.feedCd) o.feedCd = cell.feedCd;
+      if (cell.saplingStage) o.saplingStage = cell.saplingStage; if (cell.saplingCounter) o.saplingCounter = cell.saplingCounter;
+      if (cell.saplingSpeed) o.saplingSpeed = cell.saplingSpeed; if (cell.originalType) o.originalType = cell.originalType;
+      if (cell.love) o.love = cell.love; if (cell.loveFed) o.loveFed = cell.loveFed;
+      if (cell.planted) o.planted = true;
+      return o;
+    })),
+  };
+}
+
+function save(){
+  if (_isResetting) return;
+  if (!isFinite(state.coins)) state.coins = 0;
+  if (!isFinite(state.xp)) state.xp = 0;
+  if (!isFinite(state.level)) state.level = 0;
+  if (!isFinite(state.stamina)) state.stamina = 0;
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(buildSaveData()));
+  } catch(e) {}
+}
+
+const BACKUP_KEY = SAVE_KEY + '_backup';
+let _lastBackupTs = 0;
+
+function snapshotBackup(){
+  // 只在"看起来是真实进度"时快照
+  if (!state.playerName) return;
+  if (state.level <= 1 && state.coins < 100 && Object.keys(state.inv).length < 3) return;
+  // 距离上次快照至少 50 秒
+  const now = Date.now();
+  if (now - _lastBackupTs < 50000) return;
+  try {
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(buildSaveData()));
+    _lastBackupTs = now;
+  } catch(e) {}
+}
+
+// 每 10 秒检查一次，够 50 秒就快照
+setInterval(snapshotBackup, 10000);
+function isSaveLooksReal(d){
+  if (!d || typeof d !== 'object') return false;
+  if (!d.playerName) return false;
+  if (d.level <= 1 && d.coins < 100 && Object.keys(d.inv || {}).length < 3) return false;
+  return true;
+}
+
+function load(){
+  // 1. 先读主存档
+  const raw = localStorage.getItem(SAVE_KEY);
+  if (raw){
+    try {
+      const clean = sanitizeSaveData(JSON.parse(raw));
+      if (clean && isSaveLooksReal(clean)){
+        Object.assign(state, clean);
+        return true;
+      }
+    } catch(e){}
+  }
+  // 2. 主存档不可用 → 尝试备份
+  const bk = localStorage.getItem(BACKUP_KEY);
+  if (bk){
+    try {
+      const clean = sanitizeSaveData(JSON.parse(bk));
+      if (clean && isSaveLooksReal(clean)){
+        Object.assign(state, clean);
+        console.log('⚠️ 主存档损坏，已从备份恢复');
+        return true;
+      }
+    } catch(e){}
+  }
+  return false;
+}
+setInterval(save, 5000);
+window.addEventListener('beforeunload', save);
+
+function strToB64(str){ const bytes = new TextEncoder().encode(str); let bin = ''; for (let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]); return btoa(bin); }
+function b64ToStr(b64){ const bin = atob(b64.replace(/\s+/g,'')); const bytes = new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i); return new TextDecoder().decode(bytes); }
+function exportSaveBase64(){ try { const raw = localStorage.getItem(SAVE_KEY); if (!raw) return ''; return strToB64(raw); } catch(e){ return ''; } }
+function importSaveBase64(b64){
+  try {
+    const json = b64ToStr(b64.trim()); const d = JSON.parse(json); const clean = sanitizeSaveData(d);
+    if (!clean) return { ok:false, msg:'存档格式不识别' };
+    if (!clean.map) return { ok:false, msg:'地图数据异常（可能不完整）' };
+    clean._version = SAVE_VERSION; clean._importedAt = Date.now();
+    _isResetting = true; window.removeEventListener('beforeunload', save);
+    localStorage.setItem(SAVE_KEY, JSON.stringify(clean));
+    return { ok:true };
+  } catch(e){ return { ok:false, msg: '解析失败：' + e.message }; }
+}
+function openSaveManager(){
+  const b64 = exportSaveBase64();
+  const sizeKB = (b64.length / 1024).toFixed(1);
+  openModal(`<h2>💾 存档管理<span>当前存档：约 ${sizeKB} KB</span></h2>
+    <div class="tabs"><div class="tab active" data-tab="export">📤 导出</div><div class="tab" data-tab="import">📥 导入</div></div>
+    <div id="saveTabExport">
+      <div style="color:var(--dim);font-size:12px;margin-bottom:8px">复制下面这段文本，粘贴到记事本、聊天窗口或任何地方。这就是你的完整进度。</div>
+      <textarea id="saveExportText" class="saveTextarea" readonly></textarea>
+      <div class="modalFoot" style="justify-content:flex-start"><button class="btn" id="btnCopySave">📋 复制到剪贴板</button><button class="btn" id="btnDownloadSave">💾 下载为文件</button></div>
+    </div>
+    <div id="saveTabImport" style="display:none">
+      <div style="color:var(--dim);font-size:12px;margin-bottom:8px">粘贴之前导出的存档内容，点击导入即可恢复。<b style="color:var(--red)">当前进度会被完全覆盖！</b></div>
+      <textarea id="saveImportText" class="saveTextarea" placeholder="在这里粘贴存档..."></textarea>
+      <div class="modalFoot" style="justify-content:flex-start"><button class="btn" id="btnPasteFromClipboard">📋 从剪贴板粘贴</button><button class="btn gold" id="btnImportSave">📥 导入并覆盖</button></div>
+    </div>
+    <div class="modalFoot"><button class="btn" id="mClose">关闭</button></div>`,
+    m => {
+      const exportTa = m.querySelector('#saveExportText');
+      const importTa = m.querySelector('#saveImportText');
+      exportTa.value = b64;
+      m.querySelector('#mClose').onclick = closeModal;
+      m.querySelectorAll('.tab').forEach(el => { el.onclick = () => { m.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); el.classList.add('active'); const tab = el.dataset.tab; m.querySelector('#saveTabExport').style.display = tab === 'export' ? '' : 'none'; m.querySelector('#saveTabImport').style.display = tab === 'import' ? '' : 'none'; }; });
+      m.querySelector('#btnCopySave').onclick = async () => { try { await navigator.clipboard.writeText(exportTa.value); log('📋 存档已复制到剪贴板'); } catch(e){ exportTa.select(); document.execCommand('copy'); log('📋 存档已复制（兼容模式）'); } };
+      m.querySelector('#btnDownloadSave').onclick = () => { const blob = new Blob([exportTa.value], {type:'text/plain'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19); a.href = url; a.download = `maple_save_${ts}.txt`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); log('💾 存档文件已下载'); };
+      m.querySelector('#btnPasteFromClipboard').onclick = async () => { try { const text = await navigator.clipboard.readText(); importTa.value = text; log('📋 已从剪贴板粘贴'); } catch(e){ log('❌ 无法自动读取剪贴板，请手动粘贴'); } };
+      m.querySelector('#btnImportSave').onclick = () => {
+        const val = importTa.value.trim();
+        if (!val){ log('❌ 请先粘贴存档内容'); return; }
+        if (!confirm('确定导入？当前进度将被完全覆盖，无法撤销！')) return;
+        const r = importSaveBase64(val);
+        if (r.ok){ log('📥 存档导入成功，正在刷新页面…'); setTimeout(() => location.reload(), 600); }
+        else log('❌ 导入失败：' + (r.msg || '数据格式不对'));
+      };
+    });
+}
+
+function openNameSetup(){
+  let chosenColor = state.playerNameColor;
+  openModal(`<h2>🏷️ 设置你的名字<span>不可修改，请慎重</span></h2>
+    <div style="color:var(--dim);font-size:12px;margin-bottom:8px">这个名字将永远伴随你。名字和称号会显示在游戏顶部。</div>
+    <input class="nameInput" id="nameInput" maxlength="16" placeholder="例如 Yxf_qwq" value="${state.playerName ? state.playerName : ''}">
+    <div style="font-size:12px;color:var(--dim);margin-top:8px">选择名字颜色：</div>
+    <div class="nameColorRow" id="colorRow">${NAME_COLORS.map(c => `<div class="colorSwatch ${c===chosenColor?'sel':''}" data-color="${c}" style="background:${c}"></div>`).join('')}</div>
+    <div class="modalFoot"><button class="btn gold" id="btnConfirmName">确认</button></div>`,
+    m => {
+      m.querySelectorAll('.colorSwatch').forEach(el => { el.onclick = () => { chosenColor = el.dataset.color; m.querySelectorAll('.colorSwatch').forEach(x => x.classList.remove('sel')); el.classList.add('sel'); }; });
+      m.querySelector('#btnConfirmName').onclick = () => {
+        const val = m.querySelector('#nameInput').value.trim();
+        if (!val){ log('❌ 名字不能为空'); return; }
+        if (!/^[\w\u4e00-\u9fa5]{1,16}$/.test(val)){ log('❌ 名字只能包含字母、数字、下划线、中文，最多16位'); return; }
+        state.playerName = val; state.playerNameColor = chosenColor;
+        log(`🏷️ 你好，${val}！`);
+        save(); renderTop(); closeModal();
+      };
+    });
+}
+
+function rollGacha(){
+  state.gachaPity++;
+  let forceHigh = false;
+  if (state.gachaPity >= 100){ forceHigh = true; state.gachaPity = 0; }
+  let item;
+  if (forceHigh){
+    const highPool = GACHA_POOL.filter(p => p.tier >= 5);
+    const totalW = highPool.reduce((s,p)=>s+p.weight,0);
+    let r = Math.random()*totalW;
+    for (const p of highPool){ r -= p.weight; if (r <= 0){ item = p; break; } }
+    if (!item) item = highPool[0];
+  } else {
+    const totalW = GACHA_POOL.reduce((s,p)=>s+p.weight,0);
+    let r = Math.random()*totalW;
+    for (const p of GACHA_POOL){ r -= p.weight; if (r <= 0){ item = p; break; } }
+    if (!item) item = GACHA_POOL[0];
+  }
+  if (item.tier >= 5) state.gachaPity = 0;
+  return item;
+}
+function applyGachaResult(item){
+  if (item.give === '__stamina_up__'){ state.staminaMax += 10; state.totalStaminaBonus += 10; state.stamina = state.staminaMax; logEgg('🎰 ★★★★★★ 超级大奖：永久 +10 体力上限！'); }
+  else for (const [id,n] of Object.entries(item.give)) addItem(id, n);
+}
+function openWishWell(){
+   const wishes = [
+    {id:'w2', name:'随机高级宝石', icon:'💎', cost:{ rainbow_wool:1 }, coins:300,
+     desc:'彩虹羊毛 ×1 + 💰300 → 随机宝石 ×1（钻石 59% / 月石 32% / 绿宝石 6% / 蓝宝石 3%）', give:'__random_gem__'},
+    {id:'w4', name:'体力药水', icon:'⚡', cost:{ golden_egg:1 }, coins:300,
+     desc:'金蛋 ×1 + 💰300 → 立即恢复 50 ⚡ 体力', give:'__stamina_potion__'},
+    {id:'w5', name:'随机高级种子', icon:'🌱', cost:{ golden_egg:1, fiber:10 },
+     desc:'金蛋 ×1 + 🌿纤维×10 → 随机高级种子（神秘种子 40% / 西瓜种子×5 30% / 大米种子×8 20% / 小麦种子×10 10%）', give:'__random_seed__'},
+    {id:'w6', name:'蓝宝石兑换', icon:'🔷', cost:{ sapphire:1 },
+     desc:'蓝宝石 ×1 → 钻石 ×4 + 月石 ×2（神器材料）', give:{ diamond:4, moonstone:2 }},
+    {id:'w7', name:'绿宝石兑换', icon:'💚', cost:{ emerald:1 }, coins:200,
+     desc:'绿宝石 ×1 + 💰200 → 月石 ×2（神器材料）', give:{ moonstone:2 }},
+  ];
+  const rows = wishes.map(w => {
+    const itemOk = Object.entries(w.cost).every(([id,n]) => hasItem(id,n));
+    const coinOk = state.coins >= (w.coins || 0);
+    const can = itemOk && coinOk;
+    const costStr = Object.entries(w.cost).map(([id,n]) => {
+      const ok = hasItem(id,n);
+      return `<span style="color:${ok?'var(--green)':'var(--red)'}">${def(id).icon}${def(id).name}×${n}</span>`;
+    }).join(' ');
+    const coinStr = w.coins ? `<span style="color:${coinOk?'var(--green)':'var(--red)'}">💰${w.coins}</span>` : '';
+    return `<div class="craftItem ${can?'':'dis'}" data-wish="${w.id}" style="grid-column:1/-1"><div class="ci" style="font-size:26px">${w.icon}</div><div class="cn"><b>${w.name}</b><small>${w.desc}<br>${costStr}${coinStr ? ' + ' + coinStr : ''}</small></div></div>`;
+  }).join('');
+  openModal(`<h2>⛲ 许愿池<span>投入稀有之物，换取心愿</span></h2>
+    <div style="color:#a06cf0;font-size:12px;margin-bottom:12px;font-style:italic">"旅行者，许下你的愿望吧……"</div>
+    <div class="craftList">${rows}</div>
+    <div class="modalFoot"><button class="btn" id="mClose">关闭</button></div>`,
+    m => {
+      m.querySelector('#mClose').onclick = closeModal;
+      m.querySelectorAll('.craftItem[data-wish]').forEach(el => {
+        el.onclick = () => {
+          if (el.classList.contains('dis')){ log('❌ 材料或金币不足'); return; }
+          const w = wishes.find(x => x.id === el.dataset.wish);
+          if (!w) return;
+          if (w.give === '__stamina_potion__' && state.stamina >= state.staminaMax){
+            log('⚡ 体力已满，不需要体力药水'); return;
+          }
+          Object.entries(w.cost).forEach(([id,n]) => removeItem(id, n));
+          state.coins -= (w.coins || 0);
+          if (w.give === '__random_gem__'){
+            const gem = weightedPick([['diamond',59],['moonstone',32],['emerald',6],['sapphire',3]]);
+            addItem(gem, 1);
+            unlockCodex('ore', gem);
+            logEgg(`⛲✨ 许愿成功！获得 ${def(gem).icon}${def(gem).name} ×1`);
+          } else if (w.give === '__stamina_potion__'){
+            const before = state.stamina;
+            state.stamina = Math.min(state.staminaMax, state.stamina + 50);
+            logEgg(`⛲✨ 许愿成功！恢复 ${state.stamina - before} ⚡ 体力`);
+            renderStamina();
+          } else if (w.give === '__random_seed__'){
+            const seedId = weightedPick([['seed_mystery',40],['seed_watermelon',30],['seed_rice',20],['seed_wheat',10]]);
+            const amounts = { seed_mystery:1, seed_watermelon:5, seed_rice:8, seed_wheat:10 };
+            const n = amounts[seedId] || 1;
+            addItem(seedId, n);
+            logEgg(`⛲✨ 许愿成功！获得 ${def(seedId).icon}${def(seedId).name} ×${n}`);
+          } else {
+            for (const [id,n] of Object.entries(w.give)){
+              addItem(id, n);
+            }
+            logEgg(`⛲✨ 许愿成功！获得 ${w.icon}${w.name} ×1`);
+          }
+          renderAll(); save(); openWishWell();
+        };
+      });
+    });
+}
+
+function openGacha(){
+  openModal(`<h2>🎰 扭蛋机<span>100 💰 / 次 · 900 💰 / 十连</span></h2>
+    <div style="color:var(--dim);font-size:12px;margin-bottom:10px">试试你的运气吧。每 100 抽必出传说级以上奖励。</div>
+    <div id="gachaResult"></div>
+    <div class="modalFoot" style="justify-content:flex-start"><button class="btn" id="btnRoll1">🎲 单抽 (100💰)</button><button class="btn gold" id="btnRoll10">🎰 十连 (900💰)</button><button class="btn" id="mClose">关闭</button></div>`,
+    m => {
+      const resultBox = m.querySelector('#gachaResult');
+      const doRoll = (times) => {
+        const price = times === 1 ? 100 : 900;
+        if (state.coins < price){ log('❌ 金币不足'); return; }
+        state.coins -= price;
+        const results = [];
+        for (let i=0;i<times;i++) results.push(rollGacha());
+        results.forEach(item => applyGachaResult(item));
+        if (results.some(r => r.give && r.give.stardust_fragment)) unlockCodex('rare', 'stardust_fragment');
+        progressTask('gacha');
+        resultBox.innerHTML = `<div class="gacha-result">${results.map(item => {
+          const icons = item.give === '__stamina_up__' ? '⚡' : Object.keys(item.give).map(id => def(id).icon).join('');
+          return `<div class="gacha-cell t${item.tier}"><span class="gi">${icons}</span><span>${item.name}</span></div>`;
+        }).join('')}</div>`;
+        const supers = results.filter(r => r.tier >= 5);
+        if (supers.length) supers.forEach(r => logEgg(`🎰 抽到【${r.name}】！`));
+        renderAll(); save();
+      };
+      m.querySelector('#mClose').onclick = closeModal;
+      m.querySelector('#btnRoll1').onclick = () => doRoll(1);
+      m.querySelector('#btnRoll10').onclick = () => doRoll(10);
+    });
+}
+
+const STAMINA_PRICES = [50, 75, 100, 150, 200];
+function openBuyStamina(){
+  const today = todayStr();
+  if (state.staminaShop.date !== today) state.staminaShop = {date: today, count: 0};
+  const count = state.staminaShop.count;
+  const price = count < 5 ? STAMINA_PRICES[count] : null;
+  const can = price !== null && state.coins >= price;
+  openModal(`<h2>🛏️ 体力补给<span>今日剩余：${5-count} 次</span></h2>
+    <div style="color:var(--dim);font-size:12px;margin-bottom:12px">每天可购买 5 次，价格依次递增。每次恢复 20 点体力。</div>
+    <div class="craftList">${price !== null ? `<div class="craftItem ${can?'':'dis'}" data-buy="1" style="grid-column:1/-1"><div class="ci">⚡</div><div class="cn"><b>恢复 20 体力</b><small>💰 ${price} · 今日第 ${count+1} 次</small></div></div>` : `<div class="craftItem dis" style="grid-column:1/-1"><div class="ci">⚡</div><div class="cn"><b>今日次数已用完</b><small>明天再来吧</small></div></div>`}</div>
+    <div class="modalFoot"><button class="btn" id="mClose">关闭</button></div>`,
+    m => {
+      m.querySelector('#mClose').onclick = closeModal;
+      const buyBtn = m.querySelector('[data-buy]');
+      if (buyBtn){ buyBtn.onclick = () => { if (state.coins < price){ log('❌ 金币不足'); return; } state.coins -= price; state.staminaShop.count++; state.stamina = Math.min(state.staminaMax, state.stamina + 20); log(`🛏️ 购买体力 +20（-${price}💰）`); renderAll(); save(); openBuyStamina(); }; }
+    });
+}
+function openGuide(){
+  openModal(`<h2>📜 枫之谷生存指南<span>点击关闭后可继续游戏</span></h2>
+    <div style="display:flex; flex-direction:column; gap:12px; font-size:13px; line-height:1.6; padding-bottom:10px">
+      
+      <div style="background:var(--panel2); padding:12px; border-radius:8px; border:1px solid var(--line)">
+        <b style="color:var(--gold); font-size:14px;">💡 1. 生存与体力</b><br>
+        • 砍树、挖矿、种地都会消耗 <b>⚡ 体力</b>。<br>
+        • 体力没了不要慌，点击背包里的食物（苹果、面包等）食用可以恢复。<br>
+        • 体力每 30 秒会自动恢复 1 点，杂货铺每天也能买 5 次体力。
+      </div>
+
+      <div style="background:var(--panel2); padding:12px; border-radius:8px; border:1px solid var(--line)">
+        <b style="color:var(--green); font-size:14px;">💰 2. 第一桶金</b><br>
+        • 去地图上采集物品，获得金币。<br>
+        • 去<b>杂货铺 🏪</b>购买工具/种子。<br>
+        • 挖矿、钓鱼、砍树……各种赚钱方法，任你探索！<br>
+      </div>
+
+      <div style="background:var(--panel2); padding:12px; border-radius:8px; border:1px solid var(--line)">
+        <b style="color:var(--blue); font-size:14px;">🌾 3. 农场主之路</b><br>
+        • 在杂货铺买种子，选中后种在地图左下方的<b>棕色农田区</b>。<br>
+        • 种下后显示 💧，必须<b>浇水</b>才会生长。<br>
+        • 去河边用铁桶装水，变成水桶后点作物浇水（下雨天种下则免浇水）。<br>
+        • 买把镰刀，站在田里一刀收 3×3 格，经验和金币拿到手软。
+      </div>
+
+      <div style="background:var(--panel2); padding:12px; border-radius:8px; border:1px solid var(--line)">
+        <b style="color:var(--purple); font-size:14px;">🎣 4. 其他探索</b><br>
+        • <b>钓鱼</b>：在河边点击水面即可，不消耗体力！<br>
+        • <b>天气</b>：每 20 分钟变一次，<b>雷雨 ⛈️</b> 有概率让未成熟的作物发生变异（售价 ×3）。<br>
+        • <b>神器</b>：地图上的附魔台🔮里藏有神器，收集宝石即可解锁，能永久增加产量或售价。<br>
+        • <b>彩蛋</b>：内置多种彩蛋、稀有物品，找出ta们！<br>
+        • <b>养殖</b>：喂养动物们以获得物品，满5天有惊喜。
+
+      </div>
+
+    </div>
+    <div class="modalFoot"><button class="btn gold" id="mClose">我懂了，去玩啦！</button></div>`,
+    m => { m.querySelector('#mClose').onclick = closeModal; });
+}
+function openCheckin(){
+  const today = todayStr();
+  const c = state.checkin;
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+  const yStr = `${yesterday.getFullYear()}-${yesterday.getMonth()+1}-${yesterday.getDate()}`;
+  let currentStreak = c.streak;
+  if (c.lastDate !== today && c.lastDate !== yStr) currentStreak = 0;
+  const already = c.lastDate === today;
+  const nextDay = already ? currentStreak : currentStreak + 1;
+  const rewards = [{coins:50, extra:'', icon:'💰'},{coins:80, extra:'', icon:'💰'},{coins:120, extra:'', icon:'💰'},{coins:200, extra:'', icon:'💰'},{coins:300, extra:'', icon:'💰'},{coins:500, extra:'', icon:'💰'},{coins:500, extra:'+ 传说鱼×1', icon:'🐉'}];
+  const cells = rewards.map((r, i) => {
+    const day = i+1;
+    const done = day <= currentStreak;
+    const isToday = !already && day === nextDay;
+    const cls = 'checkin-cell' + (done?' done':'') + (isToday?' today':'');
+    return `<div class="${cls}"><span class="cd">${done?'✅':r.icon}</span>D${day}<br>💰${r.coins}${r.extra?'<br>'+r.extra:''}</div>`;
+  }).join('');
+  openModal(`<h2>📅 每日签到<span>连续 ${currentStreak} 天</span></h2>
+    <div style="color:var(--dim);font-size:12px">连续签到 7 天可以获得丰厚奖励。断签会重置进度。</div>
+    <div class="checkin-grid">${cells}</div>
+    <div class="modalFoot">${already ? '<span style="color:var(--dim);font-size:12px">今天已签到</span>' : `<button class="btn gold" id="btnDoCheckin">📅 签到（第 ${nextDay} 天）</button>`}<button class="btn" id="mClose">关闭</button></div>`,
+    m => {
+      m.querySelector('#mClose').onclick = closeModal;
+      const btn = m.querySelector('#btnDoCheckin');
+      if (btn) btn.onclick = () => { doCheckin(); openCheckin(); };
+    });
+}
+function doCheckin(){
+  const today = todayStr();
+  const c = state.checkin;
+  if (c.lastDate === today) return;
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+  const yStr = `${yesterday.getFullYear()}-${yesterday.getMonth()+1}-${yesterday.getDate()}`;
+  if (c.lastDate !== yStr) c.streak = 0;
+  c.streak++; c.lastDate = today;
+  if (c.streak > 7) c.streak = 1;
+  const rewards = [{coins:50, extra:null},{coins:80, extra:null},{coins:120, extra:null},{coins:200, extra:null},{coins:300, extra:null},{coins:500, extra:null},{coins:500, extra:'fish_legend'}];
+  const r = rewards[c.streak - 1];
+  state.coins += r.coins;
+  if (r.extra) addItem(r.extra, 1);
+  log(`📅 第 ${c.streak} 天签到：+${r.coins}💰${r.extra?' + 传说鱼×1':''}`);
+  renderAll(); save();
+}
+
+function triggerThunderMutation(){
+
+}
+function rollWeatherAndEvent(){
+  const now = Date.now();
+  const WEATHER_INTERVAL = 20 * 60 * 1000;   // 20 分钟
+  if (!state.weather.lastChange || now - state.weather.lastChange >= WEATHER_INTERVAL){
+    const roll = Math.random();
+    let type = 'sunny';
+    if (roll < 0.30) type = 'sunny'; else if (roll < 0.60) type = 'rain'; else if (roll < 0.80) type = 'thunder'; else type = 'snow';
+    state.weather = { lastChange: now, type };
+    if (type === 'thunder') triggerThunderMutation();
+    const w = WEATHERS[type];
+    logEvent(`${w.icon} 天气变化：${w.name}`);
+    if (type === 'rain') logEvent('   🌧️ 雨天会自动给作物浇水，省去繁琐的过程。');
+    if (type === 'thunder') logEvent('   ⛈️ 雷雨可能让作物发生变异……');
+    if (type === 'snow') logEvent('   ❄️ 雪天作物会暂停生长，但树林挂着雪景。');
+    if (typeof renderTop === 'function') renderTop();
+  }
+  const today = todayStr();
+  if (state.dailyEvent.date !== today){
+    const ev = DAILY_EVENTS[Math.floor(Math.random()*DAILY_EVENTS.length)];
+    state.dailyEvent = {date: today, text: ev.text, buff: ev.buff || ''};
+    logEvent(ev.text);
+    if (ev.give) for (const [id,n] of Object.entries(ev.give)) addItem(id, n);
+  }
+}
+
+function openEnchantUnlock(tier){
+  const isHigh = tier === 'high';
+  const name = isHigh ? '高级附魔台' : '低级附魔台';
+  const icon = isHigh ? '✨' : '🔮';
+  const needItem = isHigh ? 'diamond' : 'iron_ingot';
+  const needAmt = 3;
+  const needInfo = def(needItem);
+  const can = hasItem(needItem, needAmt);
+  const costHTML = `<span style="color:${can?'var(--green)':'var(--red)'}">${needInfo.icon}${needInfo.name}×${needAmt}</span>`;
+  openModal(`<h2>🔒 解锁${name}<span>需消耗材料</span></h2>
+    <div style="color:var(--dim);font-size:12px;margin-bottom:12px">附魔台是永久设施，解锁后永久可用。附魔本身还会消耗经验等级。</div>
+    <div class="craftList"><div class="craftItem ${can?'':'dis'}" data-unlock="1" style="grid-column:1/-1"><div class="ci">${icon}</div><div class="cn"><b>解锁${name}</b><small>消耗 ${costHTML} · 当前拥有 ${needInfo.icon}×${state.inv[needItem]||0}</small></div></div></div>
+    <div class="modalFoot"><button class="btn" id="mClose">关闭</button></div>`,
+    m => {
+      m.querySelector('#mClose').onclick = closeModal;
+      m.querySelector('[data-unlock]').onclick = () => {
+        if (!hasItem(needItem, needAmt)){ log(`❌ ${needInfo.name}不足（需要 ${needAmt} 个）`); return; }
+        for (let i=0;i<needAmt;i++) removeItem(needItem, 1);
+        if (isHigh) state.enchHighUnlocked = true; else state.enchLowUnlocked = true;
+        log(`✨ 成功解锁${name}！`);
+        save(); renderAll(); renderMapAll(); closeModal();
+      };
+    });
+}
+
+function doFillBucket(r,c){
+  if (!removeItem('iron_bucket', 1)) return;
+  addItem('water_bucket', 1);
+  state.map[r][c] = makeCell('empty'); updateCell(r,c);
+  setTimeout(() => { if (state.map[r][c] && state.map[r][c].type === 'empty'){ state.map[r][c] = makeCell('water'); updateCell(r,c); } }, 5000);
+  if (hasItem('water_bucket')) state.selected = 'water_bucket'; else state.selected = null;
+  gainXp(1); log('🛢️ 装了一桶水（水会在 5 秒后原地重生）'); renderInventory();
+}
+function doWaterCrop(r,c){
+  const d = state.map[r][c];
+  if (!d.crop){ log('💧 这里没有作物需要浇水'); return; }
+  if (d.crop.watered){ log('💧 这株作物已经浇过水了'); return; }
+  if (!removeItem('water_bucket', 1)) return;
+  addItem('iron_bucket', 1); d.crop.watered = true; updateCell(r,c);
+  if (hasItem('iron_bucket')) state.selected = 'iron_bucket'; else state.selected = null;
+  gainXp(1); 
+  const cropName = d.crop.lucky ? '神秘种子' : CROPS[d.crop.id].name;
+  log(`💧 浇水成功！${cropName} 开始生长`); 
+  renderInventory();
+  if (!state._hasWateredCrop) {
+    state._hasWateredCrop = true;
+    log('💡 提示：作物成熟需要时间。趁现在，去河边点水面钓几条鱼吧！');
+  }
+}
+
+function onCellClick(r,c){
+  const now = Date.now();
+  if (r === lastClick.r && c === lastClick.c && now - lastClick.t < 200) return;
+  lastClick = {r, c, t: now};
+  const d = state.map[r][c];
+
+  if (d.type === 'water' && state.selected === 'iron_bucket'){ doFillBucket(r,c); return; }
+  if ((d.type === 'dirt' || d.type === 'farmland') && state.selected === 'water_bucket'){
+    if (d.crop && !d.crop.watered){ doWaterCrop(r,c); return; }
+  }
+  if ((d.type === 'empty' || d.type === 'dirt' || d.type === 'farmland') && state.selected === 'maple_sapling'){
+    tryPlantSapling(r,c); return;
+  }
+  if ((d.type === 'empty' || d.type === 'grass' || d.type === 'dirt' || d.type === 'farmland') && state.selected && state.selected.startsWith('flower_')){
+    tryPlantFlower(r,c); return;
+  }
+
+  if (HARVEST_TYPES.has(d.type)){
+    if (now - lastHarvest < HARVEST_CD){ log(`⏳ 冷却中… 还需 ${((HARVEST_CD-(now-lastHarvest))/1000).toFixed(1)} 秒`); return; }
+    if (!hasStamina()){ log('⚡ 体力不足（需要 2 点）！吃点东西吧'); return; }
+    let ok = false;
+    switch (d.type){
+      case 'grass': ok = doHarvestGrass(r,c); break;
+      case 'flower': ok = doPickFlower(r,c); break;
+      case 'tree': ok = doChopTree(r,c); break;
+      case 'rock': ok = doMine(r,c); break;
+      case 'dirt': case 'farmland': ok = doDirtOrFarmland(r,c); break;
+      case 'sand': ok = doDigSand(r,c); break;
+      case 'clay': ok = doDigClay(r,c); break;
+      case 'sapling': log(`🌱 树苗生长中… (${d.saplingStage}/2)`); ok = false; break;
+      case 'animal': ok = doAnimal(r,c); break;
+    }
+    if (ok){ lastHarvest = now; spendStamina(); }
+    return;
+  }
+
+  switch (d.type){
+    case 'water': openFishing(); break;
+    case 'workbench': openCraft(); break;
+    case 'artisan': openArtisan(); break;
+    case 'chest': openChest(); break;
+    case 'shop': openShop(); break;
+    case 'furnace': openFurnace(); break;
+    case 'gacha': openGacha(); break;
+    case 'wish_well': openWishWell(); break;
+    case 'merchant': openMerchant(); break;
+    case 'enchant_low': if (state.enchLowUnlocked) openEnchant('low'); else openEnchantUnlock('low'); break;
+    case 'enchant_high': if (state.enchHighUnlocked) openEnchant('high'); else openEnchantUnlock('high'); break;
+  }
+}
+
+function tryPlantSapling(r,c){
+  if (!hasStamina()){ log('⚡ 体力不足（需要 2 点）！吃点东西吧'); return; } // 新增判定
+  const d = state.map[r][c];
+  if (d.type !== 'empty' && d.type !== 'dirt' && d.type !== 'farmland'){ log('🌱 只能种在泥土、耕地或空地上'); return; }
+  if (d.crop){ log('🌱 这里已经有作物了'); return; }
+  
+  for (let dr=-1;dr<=1;dr++) for (let dc=-1;dc<=1;dc++){
+    const nr=r+dr, nc=c+dc;
+    if (nr<0||nr>=ROWS||nc<0||nc>=COLS){ log('🌱 需要 3×3 的空间，不能超出地图边界'); return; }
+    const nd = state.map[nr][nc];
+    if (nd.type !== 'empty' && nd.type !== 'dirt' && nd.type !== 'farmland'){ 
+      log(`🌱 3×3 范围内有障碍物 (${nr},${nc})`); return; 
+    }
+    if (nd.crop){ log(`🌱 3×3 范围内有作物 (${nr},${nc})`); return; }
+    if (nd.animal){ log(`🌱 3×3 范围内有动物 (${nr},${nc})`); return; }
+  }
+  if (!removeItem('maple_sapling',1)) return;
+  const centerType = state.map[r][c].type;
+  state.map[r][c] = makeCell('sapling', {saplingStage: 0, saplingCounter: 0, saplingSpeed: centerType === 'farmland' ? 'fast' : 'normal', originalType: centerType, planted: true});
+  updateCell(r,c);
+  if (!hasItem('maple_sapling')) state.selected = null;
+  gainXp(3); spendStamina(); // 扣除体力
+  log('🌱 种下枫树苗，需要 3×3 空间生长'); renderInventory();
+}
+
+function harvestOneCrop(r,c){
+  const d = state.map[r][c];
+  if (!d.crop || d.crop.stage < CROPS[d.crop.id].grow) return false;
+  const cd = CROPS[d.crop.id];
+  let n = randInt(cd.yield[0], cd.yield[1]);
+  if (state.divineHoe) n = Math.ceil(n * 1.5);
+  if (state.divineHoe && Math.random() < 0.15) n += 1;
+  let isGold = false;
+  const isMutant = !!d.crop.mutant;
+  if (isMutant){
+    addItem(cd.mutantId, n); unlockCodex('crop', cd.mutantId);
+    logEgg(`⛈️✨ 收获了【${def(cd.mutantId).name}】×${n}！（3 倍售价）`);
+  } else if (d.crop.lucky){
+    isGold = true;
+    const luckyCrops = ['wheat','rice','watermelon'];
+    const luckyId = luckyCrops[Math.floor(Math.random()*luckyCrops.length)];
+    const luckyCd = CROPS[luckyId];
+    n = randInt(luckyCd.yield[0], luckyCd.yield[1]);
+    if (luckyId === 'watermelon'){ addItem('watermelon_gold', n); unlockCodex('crop','watermelon_gold'); }
+    else { addItem(luckyCd.goldId, n); unlockCodex('crop', luckyCd.goldId); }
+    logEgg(`🍀✨ 神秘种子生效！收获了【金穗${luckyCd.name}】×${n}！`);
+  }else if (Math.random() < 0.02){
+    isGold = true;
+    addItem(cd.goldId, n); unlockCodex('crop', cd.goldId);
+    logEgg(`✨ 幸运！你收获了【金穗${cd.name}】×${n}！`);
+  } else if (d.crop.id === 'watermelon'){
+    if (Math.random() < 0.0005){
+      addItem('iron_watermelon', 1);
+      unlockCodex('rare', 'iron_watermelon');
+      logEgg('🌑✨✨ 你长出了传说中的【铁西瓜】！！！');
+    } else {
+      addItem('watermelon_slice', n);
+    }
+  } else {
+    addItem(d.crop.id, n);
+  }
+  gainXp(6); unlockCodex('crop', d.crop.id); progressTask('harvest');
+  if (!isGold && !isMutant) log(`🌾 收获 ${cd.name} ×${n}`);
+  // 普通收获 20% 概率额外掉对应种子（金穗/变异不掉）
+  if (!isGold && !isMutant && Math.random() < 0.20){
+    addItem('seed_' + d.crop.id, 1);
+    log(`🌱 额外收获了 ${cd.name}种子 ×1`);
+  }
+
+  d.crop = null; updateCell(r,c);
+  return true;
+}
+
+
+function doDirtOrFarmland(r,c){
+  const d = state.map[r][c];
+
+  // ★ 收获成熟作物（镰刀 3×3 范围）
+  if (d.crop && d.crop.stage >= CROPS[d.crop.id].grow){
+    const targets = [[r,c]];
+    if (state.hasSickle){
+      for (let dr=-1;dr<=1;dr++) for (let dc=-1;dc<=1;dc++){
+        if (dr===0 && dc===0) continue;
+        const nr=r+dr, nc=c+dc;
+        if (nr<0||nr>=ROWS||nc<0||nc>=COLS) continue;
+        const nd = state.map[nr][nc];
+        if ((nd.type === 'dirt' || nd.type === 'farmland') && nd.crop && nd.crop.stage >= CROPS[nd.crop.id].grow){
+          targets.push([nr,nc]);
+        }
+      }
+    }
+    let count = 0;
+    for (const [nr,nc] of targets) if (harvestOneCrop(nr,nc)) count++;
+    if (count > 1) log(`🌾 镰刀 3×3 一次收获 ${count} 株作物！`);
+    return true;
+  }
+
+  if (d.crop){ log(`🌱 还在生长中… (${d.crop.stage}/${CROPS[d.crop.id].grow})`); return false; }
+  if (state.selected && def(state.selected).seed){
+    if (isNearPlayerMaple(r, c)) { log('🌱 枫树周围 3×3 范围内不能种作物'); return false; }
+    const cropId = def(state.selected).seed;
+    const wasLucky = !!def(state.selected).lucky;
+    if (!removeItem(state.selected, 1)){ state.selected = null; renderInventory(); return false; }
+    d.crop = {id:cropId, stage:0, counter:0, watered:false, lucky: wasLucky};
+    if (!hasItem(state.selected)) state.selected = null;
+    gainXp(2);
+    const cropName = wasLucky ? '神秘种子' : CROPS[cropId].name;
+    if (state.weather.type === 'rain' || state.weather.type === 'thunder'){
+      d.crop.watered = true;
+      log(`🌱 种下 ${cropName}，🌧️ 雨天自动浇水`);
+    } else {
+      const speedTag = d.type === 'farmland' ? '（耕地加速 30%）' : '';
+      log(`🌱 种下了 ${cropName}${speedTag} · 💧 需要浇一次水才会生长`);
+    }
+    updateCell(r,c); renderInventory(); return true;
+  }
+  if (d.type === 'dirt'){
+    if (!state.hasSickle){ log('🌾 需要镰刀才能开垦（也可以选中种子直接种植）'); return false; }
+    state.map[r][c] = makeCell('farmland'); updateCell(r,c); gainXp(2);
+    log('🌾 开垦出一块耕地！作物在此成熟快 30%'); return true;
+  }
+  log('🌱 先在背包里选中一包种子'); return false;
+}
+
+function doDigSand(r,c){ addItem('sand', 1); gainXp(1); progressTask('mine','sand'); log('🟨 挖到沙子 ×1'); state.map[r][c] = makeCell('empty'); updateCell(r,c); return true; }
+function doDigClay(r,c){ addItem('clay', 1); gainXp(1); log('🟫 挖到粘土 ×1'); state.map[r][c] = makeCell('water'); updateCell(r,c); return true; }
+
+function doHarvestGrass(r,c){
+  const targets = [[r,c]];
+  if (state.hasSickle) for (let dr=-1;dr<=1;dr++) for (let dc=-1;dc<=1;dc++){
+    if (dr===0 && dc===0) continue;
+    const nr=r+dr, nc=c+dc;
+    if (nr<0||nr>=ROWS||nc<0||nc>=COLS) continue;
+    if (state.map[nr][nc].type === 'grass') targets.push([nr,nc]);
+  }
+  let count = 0;
+  const cropPool = Object.entries(CROPS).filter(([k,v])=>v.type==='crop').map(([k,v])=>[k,v.seedW]);
+  for (const [nr,nc] of targets){
+    addItem('fiber', 1);
+    if (Math.random() < 0.40){ const cropId = weightedPick(cropPool); addItem('seed_'+cropId, 1); log(`🌱 割草时发现了 ${CROPS[cropId].name}种子`); }
+    if (Math.random() < 0.06) addItem('seed_wheat', 1);
+    if (Math.random() < 0.04) addItem('maple_sapling', 1);
+    const restore = inFarmArea(nr, nc) ? 'dirt' : 'empty';
+    state.map[nr][nc] = makeCell(restore); updateCell(nr,nc);
+    if (restore === 'empty') scheduleSpawn('grass', 14000);
+    count++;
+  }
+  gainXp(count); log(`🌿 收获了 ${count} 个纤维${count>1?'（镰刀 3×3）':''}`); return true;
+}
+
+function tryPlantFlower(r,c){
+  if (!hasStamina()){ log('⚡ 体力不足（需要 2 点）！吃点东西吧'); return; } // 新增判定
+  if (!inFarmArea(r,c)){ log('🌸 只能在农田区（地图左下方）种花'); return; }
+  if (isNearPlayerMaple(r, c)){ log('🌸 农田枫树周围 3×3 范围内不能种花'); return; }
+  if (state.map[r][c].crop){ log('🌸 这里已经有作物了，先收获或移除它'); return; }
+  const d = state.map[r][c];
+  if (d.type !== 'empty' && d.type !== 'grass' && d.type !== 'dirt' && d.type !== 'farmland'){
+    log('🌸 只能种在泥土、耕地、空地或草地上'); return;
+  }
+  const id = state.selected;
+  const variant = id.replace('flower_','');
+  if (!PLANTABLE_FLOWERS.has(variant)){ log('🌸 这种植物无法种植'); return; }
+  let cnt = 0;
+  for (let rr=FARM_R0;rr<=FARM_R1;rr++) for (let cc=FARM_C0;cc<=FARM_C1;cc++){
+    const dd = state.map[rr][cc];
+    if (dd.type === 'flower' && dd.variant === variant) cnt++;
+  }
+  if (cnt >= FLOWER_LIMIT_FARM){ log(`🌸 农田区内 ${FLOWERS[variant].name} 已达上限（${FLOWER_LIMIT_FARM} 朵）`); return; }
+  if (!removeItem(id,1)){ state.selected = null; renderInventory(); return; }
+  const originalType = (d.type === 'dirt' || d.type === 'farmland') ? d.type : null;
+  state.map[r][c] = makeCell('flower', {variant, planted: true, originalType});
+  updateCell(r,c);
+  gainXp(2); spendStamina(); // 扣除体力
+  log(`🌸 在农田区种下 ${FLOWERS[variant].name}（会向周围慢慢蔓延）`);
+  if (!hasItem(id)) state.selected = null;
+  renderInventory();
+}
+
+function spreadAllFlowers(){
+  const farmCounts = {}, list = [];
+  for (let r=FARM_R0;r<=FARM_R1;r++) for (let c=FARM_C0;c<=FARM_C1;c++){
+    const d = state.map[r][c];
+    if (d.type === 'flower' && d.variant){
+      farmCounts[d.variant] = (farmCounts[d.variant]||0) + 1;
+      if (d.planted && PLANTABLE_FLOWERS.has(d.variant)) list.push([r,c,d.variant]);
+    }
+  }
+  list.sort(()=>Math.random()-0.5);
+  for (const [r,c,variant] of list){
+    if ((farmCounts[variant]||0) >= FLOWER_LIMIT_FARM) continue;
+    if (Math.random() >= 0.08) continue;
+    const cands = [];
+    for (let dr=-1;dr<=1;dr++) for (let dc=-1;dc<=1;dc++){
+      if (dr===0 && dc===0) continue;
+      const nr=r+dr, nc=c+dc;
+      if (nr<0||nr>=ROWS||nc<0||nc>=COLS) continue;
+      if (!inFarmArea(nr,nc)) continue;
+      if (isNearPlayerMaple(nr, nc)) continue;
+      const cell = state.map[nr][nc];
+      if (cell.crop) continue;   // ← 关键：有作物就不扩散过去
+      if (cell.type === 'empty' || cell.type === 'grass' || cell.type === 'dirt' || cell.type === 'farmland') cands.push([nr,nc]);
+    }
+    if (!cands.length) continue;
+    const [nr,nc] = cands[Math.floor(Math.random()*cands.length)];
+    const origT = state.map[nr][nc].type;
+    const origType = (origT === 'dirt' || origT === 'farmland') ? origT : null;
+    state.map[nr][nc] = makeCell('flower', {variant, planted: true, originalType: origType});
+    updateCell(nr,nc);
+    farmCounts[variant] = (farmCounts[variant]||0) + 1;
+  }
+}
+
+function scheduleFlowerRespawn(){
+  const flowerPairs = Object.entries(FLOWERS).map(([k,v])=>['flower_'+k, v.weight]);
+  setTimeout(() => {
+    const variant = weightedPick(flowerPairs).replace('flower_','');
+    let wildCnt = 0;
+    for (let rr=0;rr<ROWS;rr++) for (let cc=0;cc<COLS;cc++){
+      if (inFarmArea(rr,cc)) continue;
+      const d = state.map[rr][cc];
+      if (d && d.type === 'flower' && d.variant === variant) wildCnt++;
+    }
+    if (wildCnt >= FLOWER_LIMIT_WILD) return;
+    const empties = [];
+    for (let rr=0;rr<ROWS;rr++) for (let cc=0;cc<COLS;cc++)
+      if (state.map[rr][cc] && state.map[rr][cc].type === 'empty' && !inFarmArea(rr,cc) && !isNearPlayerMaple(rr,cc)) empties.push([rr,cc]);
+    if (!empties.length) return;
+    const [rr,cc] = empties[Math.floor(Math.random()*empties.length)];
+    state.map[rr][cc] = makeCell('flower', {variant});
+    updateCell(rr,cc);
+  }, 22000);
+}
+
+
+function doPickFlower(r,c){
+  const useSickle = state.hasSickle && inFarmArea(r, c);
+  const targets = [[r,c]];
+  if (useSickle){
+    for (let dr=-1;dr<=1;dr++) for (let dc=-1;dc<=1;dc++){
+      if (dr===0 && dc===0) continue;
+      const nr=r+dr, nc=c+dc;
+      if (nr<0||nr>=ROWS||nc<0||nc>=COLS) continue;
+      if (!inFarmArea(nr, nc)) continue;   // ← 关键：范围外跳过
+      if (state.map[nr][nc].type === 'flower') targets.push([nr,nc]);
+    }
+  }
+  const collected = {};
+  let total = 0;
+  for (const [nr,nc] of targets){
+    const d = state.map[nr][nc];
+    const color = d.variant;
+    const f = FLOWERS[color];
+    if (!f) continue;
+    let n = 1;
+    if (state.dailyEvent.buff === 'flower_bonus') n = 2;
+    addItem('flower_'+color, n);
+    collected[color] = (collected[color]||0) + n;
+    gainXp(2); unlockCodex('flower', 'flower_'+color); progressTask('pick_flower');
+    const restore = (d.originalType === 'dirt' || d.originalType === 'farmland') ? d.originalType
+                  : (inFarmArea(nr, nc) ? 'dirt' : 'empty');
+    state.map[nr][nc] = makeCell(restore); updateCell(nr,nc);
+    total++;
+    scheduleFlowerRespawn();
+  }
+  if (total === 0) return false;
+  if (total === 1){
+    const [id,n] = Object.entries(collected)[0];
+    log(`🌸 采到 ${FLOWERS[id.replace('flower_','')].name} ×${n}`);
+  } else {
+    const summary = Object.entries(collected).map(([id,n]) => `${FLOWERS[id.replace('flower_','')].name}×${n}`).join('、');
+    log(`🌾 镰刀在田里一次采到 ${total} 朵：${summary}`);
+  }
+  return true;
+}
+
+function doChopTree(r,c){
+  if (!state.axe){ log('🪓 你需要先在商店购买斧头'); return false; }
+  const d = state.map[r][c];
+  const ench = getAxeEnch();
+  const dmg = AXES[state.axe].dmg + ench.eff;
+  d.hp -= dmg;
+  if (d.hp <= 0){
+    let logN = randInt(3, 6);
+    if (ench.for > 0) logN += Math.floor(logN * ench.for * 0.15);
+    const appleN = randInt(0,3);
+    addItem('maple_log', logN);
+    if (appleN > 0) addItem('apple', appleN);
+    if (Math.random() < 0.25) addItem('maple_sapling', 1);
+        gainXp(4); progressTask('chop'); state.treesChopped++;
+    unlockCodex('crop', 'maple');
+    let msg = `🌲 砍倒枫树，获得枫木原木 ×${logN}`;
+    if (appleN > 0) msg += `、苹果 ×${appleN}`;
+    log(msg);
+    checkForestKing();
+    if (!state._hasChoppedTree) {
+      state._hasChoppedTree = true;
+      log('💡 小提示：去 🛠️ 工作台把原木做成木板（1原木=4木板），然后再去杂货铺卖掉，利润极高！');
+    }
+    let restoreType = d.originalType;
+    if (!restoreType){ const inFarm = (r >= 7 && r <= 15 && c >= 3 && c <= 11); restoreType = inFarm ? 'dirt' : 'empty'; }
+    state.map[r][c] = makeCell(restoreType); updateCell(r,c);
+    if (restoreType === 'empty') scheduleSpawn('tree', 30000, {hp:16, maxHp:16});
+  } else {
+    log(`🪓 砍击中… (${Math.max(0,d.hp)}/${d.maxHp})`); updateCell(r,c);
+  }
+  return true;
+}
+
+function handleStardustDrop(sourceMsg){
+  addItem('stardust', 1);
+  unlockCodex('rare', 'stardust');
+  if (!state.eggsUnlocked.stardust){
+    state.eggsUnlocked.stardust = true;
+    logEgg('═══════════════════════════');
+    logEgg('🌟 你挖到了传说中的【星尘】！');
+    logEgg('   这是矿工们口口相传的奇迹……');
+    logEgg('💰 价值 5000 金币');
+    logEgg('🎖️ 解锁彩蛋成就：观星者');
+    logEgg('═══════════════════════════');
+  } else {
+    logEgg(sourceMsg || '🌟 又一次挖到了星尘！');
+  }
+  renderAll();
+}
+
+function tryDropStardust(){
+  if (Math.random() < 0.0001) handleStardustDrop();
+}
+
+
+function doMine(r,c){
+  const d = state.map[r][c];
+  const ore = ORES[d.variant];
+  if (state.pickaxe < ore.req){
+    log(`⛏️ 你的${PICKAXES[state.pickaxe].name}不够硬，需要${PICKAXES[ore.req].name}`);
+    return false;
+  }
+  const ench = getPickEnch();
+  const dmg = PICKAXES[state.pickaxe].dmg + ench.eff;
+  d.hp -= dmg;
+  gainXp(1);
+  if (d.hp <= 0){
+    let n = randInt(ore.amt[0], ore.amt[1]);
+    if (ench.for > 0) n += Math.floor(n * ench.for * 0.15);
+    if (state.divinePick) n = Math.ceil(n * 2);
+    if (state.divinePick && Math.random() < 0.40) n += 1;
+    addItem(ore.drop, n);
+    gainXp(ore.xp);
+    unlockCodex('ore', d.variant);
+    progressTask('mine', d.variant);
+    log(`⛏️ 挖到 ${ore.name} ×${n}`);
+    if (state.divineMeteorPick && Math.random() < 0.03){
+      handleStardustDrop('🌟 陨星镐触发！挖到了【星尘】！');
+    }
+    tryDropStardust();
+        state.map[r][c] = makeCell('empty');
+    updateCell(r,c);
+    
+    // 每次重生时，按照新的 ORE_WEIGHTS 重新随机抽取一个矿种！
+    setTimeout(() => {
+      const empties = [];
+      for (let rr=0;rr<ROWS;rr++) for (let cc=0;cc<COLS;cc++){
+        if (state.map[rr][cc] && state.map[rr][cc].type === 'empty' && !isNearPlayerMaple(rr,cc)) empties.push([rr,cc]);
+      }
+      if (!empties.length) return;
+      const [rr,cc] = empties[Math.floor(Math.random()*empties.length)];
+      const newOre = weightedPick(ORE_WEIGHTS); // 重新抽奖
+      state.map[rr][cc] = makeCell('rock', {variant:newOre, hp:ORES[newOre].hp, maxHp:ORES[newOre].hp});
+      updateCell(rr,cc);
+    }, ore.respawn * 1000);
+  } else {
+    log(`⛏️ 敲击中… (${Math.max(0,d.hp)}/${d.maxHp})`);
+    updateCell(r,c);
+  }
+  return true;
+}
+
+function doAnimal(r,c){
+  const d = state.map[r][c];
+  const a = d.animal;
+  const now = Date.now();
+  if (d.feedCd && now < d.feedCd){ const remain = ((d.feedCd - now) / 1000).toFixed(1); log(`⏳ 这只动物正在消化… 还需 ${remain} 秒`); return false; }
+  let success = false;
+  let producedRare = false;
+  const today = todayStr();
+  const hasLoveFed = d.loveFed === today;
+  if (a === 'chicken'){
+    if (hasItem('seed_wheat',1) || hasItem('seed_rice',1)){
+      if (hasItem('seed_wheat',1)) removeItem('seed_wheat',1); else removeItem('seed_rice',1);
+      if (d.love >= 4 && !hasLoveFed){
+        addItem('golden_egg', 1); unlockCodex('rare', 'golden_egg'); gainXp(5);
+        logEgg('🥚✨ 好感度满！小鸡产出了【金蛋】！好感度清零，重新开始培养');
+        producedRare = true;
+      }
+      else { addItem('egg',1); gainXp(3); log('🥚 小鸡下了一个蛋！'); }
+      progressTask('feed'); success = true;
+    } else log('🐔 需要小麦或米种子来喂鸡');
+  } else if (a === 'cow'){
+    if (hasItem('wheat',1)){
+      removeItem('wheat',1);
+      if (d.love >= 4 && !hasLoveFed){
+        addItem('milk', 3); gainXp(5);
+        logEgg('🥛✨ 好感度满！牛产出了 3 份牛奶！好感度清零，重新开始培养');
+        producedRare = true;
+      }
+      else { addItem('milk',1); gainXp(3); log('🥛 牛产出了牛奶！'); }
+      progressTask('feed'); success = true;
+    } else log('🐄 需要小麦来喂牛');
+  } else if (a === 'sheep'){
+    if (hasItem('wheat',1)){
+      removeItem('wheat',1);
+      if (d.love >= 4 && !hasLoveFed){
+        addItem('rainbow_wool', 1); unlockCodex('rare', 'rainbow_wool'); gainXp(5);
+        logEgg('☁️✨ 好感度满！羊产出了【彩虹羊毛】！好感度清零，重新开始培养');
+        producedRare = true;
+      }
+      else { addItem('wool',2); gainXp(3); log('☁️ 羊产出了羊毛 ×2！'); }
+      progressTask('feed'); success = true;
+    } else log('🐑 需要小麦来喂羊');
+  }
+  if (success){
+    d.feedCd = now + 20000;
+    if (producedRare){
+      d.love = 0;
+      d.loveFed = today;
+    } else if (d.loveFed !== today){
+      d.love = Math.min(5, (d.love||0) + 1);
+      d.loveFed = today;
+    }
+    renderAll(); updateCell(r,c); return true;
+  }
+  return false;
+}
+
+function onInvClick(id){
+  const it = def(id);
+  // 能选中的物品（种子 / 树苗 / 桶）优先——不管它能不能卖
+  const canPlantFlower = id.startsWith('flower_') && PLANTABLE_FLOWERS.has(id.replace('flower_',''));
+  const selectable = it.seed || id === 'maple_sapling' || id === 'iron_bucket' || id === 'water_bucket' || canPlantFlower;
+  if (selectable){
+    state.selected = (state.selected === id) ? null : id;
+    renderInventory();
+    if (state.selected) log(`👉 已选中 ${it.name}`);
+    return;
+  }
+  // 不能卖的东西，点一下提示
+  if (it.noSell){ log(`❌ ${it.name} 是永久工具，不能出售`); return; }
+  // 其他物品：点一下卖 1 个
+  if (state.selected === id){ state.selected = null; renderInventory(); return; }
+  // ★ 上锁检查
+  if (state.locked[id]){
+    log(`🔒 ${it.name} 已上锁，先点右上角的锁图标解锁才能出售`);
+    return;
+  }
+  sellOne(id);
+}
+
+function openModal(html, onMount){
+  const m = $('modal');
+m.innerHTML = `<div class="modalBox" id="modalBoxInner">${html}</div>`;
+  m.classList.remove('hidden');
+  onMount?.(m);
+  m.onclick = e => { if (e.target === m) closeModal(); };
+}
+function closeModal(){ $('modal').classList.add('hidden'); $('modal').innerHTML = ''; }
+
+function openFurnace(){
+  const recipes = [{in:'iron_ore', out:'iron_ingot', amt:1, nIn:1},{in:'gold_ore', out:'gold_ingot', amt:1, nIn:1},{in:'sand', out:'glass', amt:4, nIn:4},{in:'clay', out:'terracotta', amt:1, nIn:1}];
+  const items = recipes.map(r => {
+    const can = hasItem(r.in, r.nIn) && hasItem('coal',1);
+    return `<div class="craftItem ${can?'':'dis'}" data-in="${r.in}" data-out="${r.out}" data-amt="${r.amt}" data-nin="${r.nIn}"><div class="ci">🔥</div><div class="cn"><b>${def(r.out).icon} ${def(r.out).name} ×${r.amt}</b><small>${def(r.in).icon}${def(r.in).name}×${r.nIn} + ⬛煤炭×1 → ${def(r.out).name}×${r.amt}</small></div></div>`;
+  }).join('');
+  openModal(`<h2>🔥 熔炉<span>矿石 / 材料 + 煤炭 → 产物</span></h2><div class="craftList">${items}</div><div class="modalFoot"><button class="btn" id="mClose">关闭</button></div>`,
+    m => {
+      m.querySelector('#mClose').onclick = closeModal;
+      m.querySelectorAll('.craftItem[data-in]').forEach(el => {
+        el.onclick = () => {
+          if (el.classList.contains('dis')){ log('❌ 材料不足'); return; }
+          const inId = el.dataset.in, outId = el.dataset.out;
+          const amt = +el.dataset.amt, nIn = +el.dataset.nin;
+          for (let i=0;i<nIn;i++) removeItem(inId,1);
+          removeItem('coal',1);
+          addItem(outId, amt); gainXp(5);
+          log(`🔥 冶炼出 ${def(outId).name} ×${amt}`);
+          renderAll(); openFurnace();
+        };
+      });
+    });
+}
+
+function openArtisan(){
+  const scrollPos = (() => {
+    const box = document.getElementById('modalBoxInner');
+    return box ? box.scrollTop : 0;
+  })();
+  const items = [];
+  for (const r of DYE_RECIPES){
+    const can = r.flowers.every(f => hasItem('flower_'+f, 1));
+    const flowerIcons = r.flowers.map(f => FLOWERS[f].icon).join('');
+    items.push(`<div class="craftItem ${can?'':'dis'}" data-type="dye" data-color="${r.color}"><div class="ci" style="filter:drop-shadow(0 0 4px ${r.hex})">🎨</div><div class="cn"><b>${r.name}染料</b><small>${flowerIcons} ${r.flowers.map(f=>FLOWERS[f].name).join(' + ')} · 卖 ${dyePrice(r)}</small></div></div>`);
+  }
+  for (const base of Object.keys(DYE_BASES)){
+    for (const r of DYE_RECIPES){
+      const can = hasItem(DYE_BASES[base].baseItem,1) && hasItem('dye_'+r.color,1);
+      items.push(`<div class="craftItem ${can?'':'dis'}" data-type="dyed" data-base="${base}" data-color="${r.color}"><div class="ci" style="filter:drop-shadow(0 0 4px ${r.hex})">${DYE_BASES[base].icon}</div><div class="cn"><b>${r.name}${DYE_BASES[base].name}</b><small>${DYE_BASES[base].icon}${DYE_BASES[base].name}×1 + 🎨${r.name}染料×1</small></div></div>`);
+    }
+  }
+  openModal(`<h2>🎨 工匠台<span>染色 / 制作染料</span></h2><div class="craftList">${items.join('')}</div><div class="modalFoot"><button class="btn" id="mClose">关闭</button></div>`,
+    m => {
+      m.querySelector('#mClose').onclick = closeModal;
+      m.querySelectorAll('.craftItem[data-type]').forEach(el => {
+        el.onclick = () => {
+          if (el.classList.contains('dis')){ log('❌ 材料不足'); return; }
+          const type = el.dataset.type;
+          if (type === 'dye'){
+            const r = DYE_RECIPES.find(x=>x.color===el.dataset.color);
+            r.flowers.forEach(f => removeItem('flower_'+f,1));
+            addItem('dye_'+r.color, 1); unlockCodex('dye', r.color); gainXp(3);
+            log(`🎨 合成了 ${r.name}染料`);
+          } else if (type === 'dyed'){
+            const base = el.dataset.base, color = el.dataset.color;
+            removeItem(DYE_BASES[base].baseItem,1); removeItem('dye_'+color,1);
+            const id = `dyed_${base}_${color}`;
+            addItem(id, 1);
+            log(`🧵 合成了 ${def(id).name}`);
+            unlockCodex('dyed', id); gainXp(4); progressTask('dye');
+          }
+          renderAll(); openArtisan();
+        };
+      });
+      const box = document.getElementById('modalBoxInner');
+      if (box){
+        box.scrollTop = scrollPos;
+        requestAnimationFrame(() => { box.scrollTop = scrollPos; });
+      }
+    });
+}
+
+const RECIPES = [
+  {id:'r_bucket', name:'铁桶', icon:'🛢️', cost:{iron_ingot:5}, out:{iron_bucket:1}, uniqueKey:['iron_bucket','water_bucket']},
+  {id:'r_bowl', name:'碗', icon:'🥣', cost:{plank:3}, out:{bowl:1}, uniqueKey:'bowl'},
+  {id:'r_bowl_rice', name:'碗装大米', icon:'🍚', cost:{rice:6}, needBowl:true, out:{bowl_rice:1}},
+  {id:'r_bowl_rice_gold', name:'金穗碗装大米', icon:'🍚', cost:{rice_gold:6}, needBowl:true, out:{bowl_rice_gold:1}},
+  {id:'r_bowl_rice_mutant', name:'变异碗装大米', icon:'🍚', cost:{rice_mutant:6}, needBowl:true, out:{bowl_rice_mutant:1}},
+  {id:'r_bread', name:'面包', icon:'🍞', cost:{wheat:3}, out:{bread:1}},
+  {id:'r_bread_gold', name:'金穗面包', icon:'🍞', cost:{wheat_gold:3}, out:{bread_gold:1}},
+  {id:'r_bread_mutant', name:'变异面包', icon:'🍞', cost:{wheat_mutant:3}, out:{bread_mutant:1}},
+  {id:'r_plank', name:'木板', icon:'🟧', cost:{maple_log:1}, out:{plank:4}},
+  {id:'r_stardust', name:'星尘', icon:'🌟', cost:{stardust_fragment:3}, out:{stardust:1}},
+];
+function isRecipeOwned(r){
+  if (!r.uniqueKey) return false;
+  const keys = Array.isArray(r.uniqueKey) ? r.uniqueKey : [r.uniqueKey];
+  return keys.some(id => hasItem(id, 1));
+}
+function costText(cost, needBowl){
+  let s = Object.entries(cost).map(([id,n]) => {
+    const ok = hasItem(id,n);
+    return `<span style="color:${ok?'var(--green)':'var(--red)'}">${def(id).icon}${def(id).name}×${n}</span>`;
+  }).join(' ');
+  if (needBowl){ const ok = hasItem('bowl',1); s += ` 🔧<span style="color:${ok?'var(--green)':'var(--red)'}">碗（不消耗）</span>`; }
+  return s;
+}
+
+function openCraft(){
+  const items = RECIPES.map(r => {
+    let can = Object.entries(r.cost).every(([id,n]) => hasItem(id,n));
+    const owned = isRecipeOwned(r);
+    if (owned) can = false;
+    if (r.needBowl && !hasItem('bowl', 1)) can = false;
+    let sub = costText(r.cost, r.needBowl);
+    if (owned) sub = '<span style="color:var(--gold)">已拥有</span>';
+    return `<div class="craftItem ${can?'':'dis'}" data-rid="${r.id}"><div class="ci">${r.icon}</div><div class="cn"><b>${r.name}</b><small>${sub}</small></div></div>`;
+  }).join('');
+  openModal(`<h2>🛠️ 工作台<span>基础合成</span></h2><div class="craftList">${items}</div><div class="modalFoot"><button class="btn" id="mClose">关闭</button></div>`,
+    m => {
+      m.querySelector('#mClose').onclick = closeModal;
+      m.querySelectorAll('.craftItem[data-rid]').forEach(el => {
+        el.onclick = () => {
+          const r = RECIPES.find(x => x.id === el.dataset.rid);
+          if (!r) return;
+          if (isRecipeOwned(r)){ log(`❌ 你已经有${r.name}了，无法重复合成`); return; }
+          if (r.needBowl && !hasItem('bowl', 1)){ log('❌ 需要先在背包里准备一个碗'); return; }
+          if (!Object.entries(r.cost).every(([id,n]) => hasItem(id,n))){ log('❌ 材料不足'); return; }
+          Object.entries(r.cost).forEach(([id,n]) => removeItem(id,n));
+          if (r.uniqueKey === 'bowl') state.hasBowlEver = true;
+          Object.entries(r.out).forEach(([id,n]) => addItem(id,n));
+          gainXp(5); progressTask('craft');
+          if (r.id === 'r_bowl_rice') unlockCodex('crop', 'bowl_rice');
+          if (r.id === 'r_stardust') unlockCodex('rare', 'stardust');
+          if (r.id === 'r_bread') unlockCodex('crop', 'bread');
+          if (r.id === 'r_bread_gold') unlockCodex('crop', 'bread_gold');
+          if (r.id === 'r_bread_mutant') unlockCodex('crop', 'bread_mutant');
+          if (r.id === 'r_bowl_rice_gold') unlockCodex('crop', 'bowl_rice_gold');
+          if (r.id === 'r_bowl_rice_mutant') unlockCodex('crop', 'bowl_rice_mutant');
+          log(`🛠️ 合成了 ${r.name}`);
+          openCraft();
+        };
+      });
+    });
+}
+
+function openShop(){
+  const today = todayStr();
+  if (state.staminaShop.date !== today) state.staminaShop = {date: today, count: 0};
+  const staminaCount = state.staminaShop.count;
+  const staminaPrice = staminaCount < 5 ? STAMINA_PRICES[staminaCount] : null;
+  const rows = [];
+  const nextP = state.pickaxe + 1;
+  if (nextP < PICKAXES.length){ const p = PICKAXES[nextP]; rows.push(`<div class="craftItem" data-act="pick"><div class="ci">⛏️</div><div class="cn"><b>升级到 ${p.name}</b><small>💰 ${p.cost} · 附魔会 -1</small></div></div>`); }
+  else rows.push(`<div class="craftItem dis"><div class="ci">⛏️</div><div class="cn"><b>镐子已满级</b><small>月石镐</small></div></div>`);
+  const nextA = state.axe + 1;
+  if (nextA < AXES.length){ const a = AXES[nextA]; rows.push(`<div class="craftItem" data-act="axe"><div class="ci">🪓</div><div class="cn"><b>升级到 ${a.name}</b><small>💰 ${a.cost} · 伤害 ${a.dmg}${state.axe ? ' · 附魔 -1' : ''}</small></div></div>`); }
+  else rows.push(`<div class="craftItem dis"><div class="ci">🪓</div><div class="cn"><b>斧头已满级</b><small>钻石斧</small></div></div>`);
+  const nextR = state.rod + 1;
+  if (nextR < RODS.length){ const r = RODS[nextR]; rows.push(`<div class="craftItem" data-act="rod"><div class="ci">🎣</div><div class="cn"><b>升级到 ${r.name}</b><small>💰 ${r.cost} · 空钩率 ${(r.miss*100).toFixed(0)}%${state.rod ? ' · 附魔 -1' : ''}</small></div></div>`); }
+  else rows.push(`<div class="craftItem dis"><div class="ci">🎣</div><div class="cn"><b>鱼竿已满级</b><small>欧皇鱼竿</small></div></div>`);
+  if (!state.hasSickle) rows.push(`<div class="craftItem" data-act="sickle"><div class="ci">🌾</div><div class="cn"><b>购买镰刀</b><small>💰 80 · 3×3割草 + 开垦耕地</small></div></div>`);
+  else rows.push(`<div class="craftItem dis"><div class="ci">🌾</div><div class="cn"><b>镰刀</b><small>已拥有</small></div></div>`);
+  for (const [k,v] of Object.entries(CROPS)){
+    const price = v.seedPrice;
+    rows.push(`<div class="craftItem" data-act="seed" data-seed="${k}"><div class="ci">🌱</div><div class="cn"><b>${v.name}种子</b><small>💰 ${price}</small></div></div>`);
+  }
+  if (staminaPrice !== null){ const can = state.coins >= staminaPrice; rows.push(`<div class="craftItem ${can?'':'dis'}" data-act="stam"><div class="ci">⚡</div><div class="cn"><b>购买体力 +20</b><small>💰 ${staminaPrice} · 今日 ${staminaCount}/5</small></div></div>`); }
+  else rows.push(`<div class="craftItem dis"><div class="ci">⚡</div><div class="cn"><b>体力已售完</b><small>今天买满了 5 次</small></div></div>`);
+  openModal(`<h2>🏪 杂货铺<span>金币：${state.coins}</span></h2><div class="craftList">${rows.join('')}</div><div class="modalFoot"><button class="btn gold" id="mSellAll">💰 一键出售</button><button class="btn" id="mClose">关闭</button></div>`,
+    m => {
+      m.querySelector('#mClose').onclick = closeModal;
+      m.querySelector('#mSellAll').onclick = () => {
+        let total = 0, kinds = 0;
+        const TOOL_IDS = new Set(['iron_bucket', 'water_bucket', 'bowl']);
+        for (const id of Object.keys(state.inv)){
+          if (state.locked[id]) continue;
+          if (TOOL_IDS.has(id)) continue;
+          const it = def(id);
+          if (it.sell >= 1){
+            let price = it.sell;
+            const proBonus = getProBonus(id);
+            if (proBonus > 0) price = Math.floor(price * (1 + proBonus));
+            if (state.dailyEvent.buff === 'sell_bonus') price = Math.floor(price * 1.2);
+            if (state.divineSunRobe) price = Math.floor(price * 1.5);
+            total += price * state.inv[id]; kinds++;
+            delete state.inv[id];
+          }
+        }
+        if (total === 0){ log('💤 没有可出售的东西'); return; }
+        state.coins += total; progressTask('sell');
+        log(`💰 出售了 ${kinds} 种物品，共获得 ${total} 金币`);
+        renderAll(); openShop();
+      };
+      m.querySelectorAll('.craftItem[data-act]').forEach(el => {
+        el.onclick = () => {
+          const act = el.dataset.act;
+          if (act === 'pick'){
+            const p = PICKAXES[state.pickaxe + 1];
+            if (state.coins < p.cost){ log('❌ 金币不足'); return; }
+            state.coins -= p.cost;
+            const oldIdx = state.pickaxe;
+            state.pickaxe++;
+            const oldE = state.tools['t'+oldIdx];
+            state.tools['t'+state.pickaxe] = {eff: Math.max(0, oldE.eff-1), for: Math.max(0, oldE.for-1), pro: Math.max(0, oldE.pro-1)};
+            log(`⛏️ 升级为 ${p.name}！附魔已 -1`);
+          } else if (act === 'axe'){
+            const a = AXES[state.axe + 1];
+            if (state.coins < a.cost){ log('❌ 金币不足'); return; }
+            state.coins -= a.cost;
+            const oldIdx = state.axe;
+            state.axe++;
+            if (oldIdx > 0){ const oldE = state.tools['a'+oldIdx]; state.tools['a'+state.axe] = {eff: Math.max(0, oldE.eff-1), for: Math.max(0, oldE.for-1), pro: Math.max(0, oldE.pro-1)}; }
+            log(`🪓 升级为 ${a.name}！`);
+          } else if (act === 'rod'){
+            const r = RODS[state.rod + 1];
+            if (state.coins < r.cost){ log('❌ 金币不足'); return; }
+            state.coins -= r.cost;
+            const oldIdx = state.rod;
+            state.rod++;
+            if (oldIdx > 0){ const oldE = state.tools['r'+oldIdx]; state.tools['r'+state.rod] = {eff: Math.max(0, oldE.eff-1), for: Math.max(0, oldE.for-1), pro: Math.max(0, oldE.pro-1)}; }
+            log(`🎣 升级为 ${r.name}！`);
+          } else if (act === 'sickle'){
+            if (state.coins < 80){ log('❌ 金币不足'); return; }
+            state.coins -= 80; state.hasSickle = true;
+            log('🌾 购买了镰刀');
+          } else if (act === 'seed'){
+            const k = el.dataset.seed;
+            const price = CROPS[k].seedPrice;
+            if (state.coins < price){ log('❌ 金币不足'); return; }
+            state.coins -= price; addItem('seed_'+k, 1);
+            log(`🛒 购买了 ${CROPS[k].name}种子`);
+          } else if (act === 'stam'){
+            if (state.coins < staminaPrice){ log('❌ 金币不足'); return; }
+            state.coins -= staminaPrice;
+            state.staminaShop.count++;
+            state.stamina = Math.min(state.staminaMax, state.stamina + 20);
+            log(`⚡ 购买体力 +20（-${staminaPrice}💰）`);
+          }
+          renderAll(); openShop();
+        };
+      });
+    });
+}
+
+const ENCH_KEYS = ['eff', 'for', 'pro'];
+const ENCH_NAMES = {eff:'效率', for:'时运', pro:'丰饶'};
+const ENCH_DESC = {eff: {pick:'挖矿伤害 +1', axe:'砍树伤害 +1', rod:'钓鱼窗口 +0.1秒'}, for: {pick:'矿石掉落 +15%', axe:'木材/苹果 +15%', rod:'传说鱼率 +2%'}, pro: {pick:'矿石卖价 +10%', axe:'木材/苹果卖价 +10%', rod:'鱼类卖价 +10%'}};
+
+const DIVINE_ITEMS = [
+  {id:'divineRod', name:'海神竿', icon:'🎣', desc:'空钩率减半 + 传说鱼率额外 +5%', cost:{ fish_legend:3, gold_ingot:5, moonstone:1 }},
+  {id:'divineHoe', name:'丰饶锄', icon:'🌾', desc:'作物产量 +50% + 15% 概率额外 +1 个', cost:{ emerald:2, moonstone:2, gold_ingot:10 }},
+  {id:'divineCrown', name:'星辉冠', icon:'🌌', desc:'体力上限 +50 · 体力恢复速度翻倍', cost:{ stardust:1, diamond:3 }},
+  {id:'divinePick', name:'星辰镐', icon:'⛏️', desc:'矿石掉落 +100% + 40% 概率额外 +1 个', cost:{ diamond:8, moonstone:4, iron_ingot:20 }},
+  {id:'divineMeteorPick', name:'陨星镐', icon:'☄️', desc:'挖矿时 3% 概率掉落星尘（原 0.01%）', cost:{ stardust:1, emerald:1, sapphire:1 }},
+  {id:'divineSunRobe', name:'太阳圣袍', icon:'☀️', desc:'所有出售价格 +50%（永久）', cost:{ stardust:2, emerald:3, sapphire:1 }},
+];
+
+function openEnchant(tier, activeTab){
+  const isHigh = tier === 'high';
+  const maxLv = isHigh ? 5 : 3;
+  const tab = activeTab || 'pick';
+
+  if (tab === 'divine'){
+    const rows = DIVINE_ITEMS.map(d => {
+      const owned = state[d.id];
+      const can = !owned && Object.entries(d.cost).every(([id,n]) => hasItem(id,n));
+      const costStr = Object.entries(d.cost).map(([id,n]) => {
+        const ok = hasItem(id,n);
+        return `<span style="color:${ok?'var(--green)':'var(--red)'}">${def(id).icon}${def(id).name}×${n}</span>`;
+      }).join(' ');
+      return `<div class="craftItem ${owned?'dis':(can?'':'dis')}" data-divine="${d.id}" style="grid-column:1/-1"><div class="ci" style="font-size:26px">${d.icon}</div><div class="cn"><b>${d.name}${owned?' ✅ 已拥有':''}</b><small>${d.desc}<br>${costStr}</small></div></div>`;
+    }).join('');
+    openModal(`<h2>✨ 神器合成<span>永久强化，只能合成一次</span></h2>
+      <div style="color:var(--dim);font-size:12px;margin-bottom:12px">神器是永久投资，消耗大量宝石材料换取全局加成。</div>
+      <div class="craftList">${rows}</div>
+      <div class="modalFoot"><button class="btn" id="mClose">关闭</button></div>`,
+      m => {
+        m.querySelector('#mClose').onclick = closeModal;
+        m.querySelectorAll('.craftItem[data-divine]').forEach(el => {
+          el.onclick = () => {
+            const d = DIVINE_ITEMS.find(x => x.id === el.dataset.divine);
+            if (!d) return;
+            if (state[d.id]){ log('❌ 已拥有该神器'); return; }
+            if (!Object.entries(d.cost).every(([id,n]) => hasItem(id,n))){ log('❌ 材料不足'); return; }
+            if (!confirm(`确定合成【${d.name}】？消耗所有材料，永久生效。`)) return;
+            Object.entries(d.cost).forEach(([id,n]) => removeItem(id, n));
+                        state[d.id] = true;
+            if (d.id === 'divineCrown'){ state.staminaMax += 50; state.stamina = state.staminaMax; }
+            logEgg(`✨ 成功合成神器【${d.name}】！${d.desc}`);
+            save(); renderAll(); openEnchant(tier, 'divine');
+          };
+        });
+      });
+    return;
+  }
+
+  let toolLabel, ench, toolExists;
+  if (tab === 'pick'){ toolLabel = PICKAXES[state.pickaxe].name; ench = state.tools[pickKey()]; toolExists = true; }
+  else if (tab === 'axe'){ toolLabel = state.axe ? AXES[state.axe].name : '未拥有'; ench = getAxeEnch(); toolExists = state.axe > 0; }
+  else { toolLabel = state.rod ? RODS[state.rod].name : '未拥有'; ench = getRodEnch(); toolExists = state.rod > 0; }
+
+  let investedLv = 0;
+  if (toolExists){
+    for (const e of ENCH_KEYS){
+      for (let lv = 0; lv < ench[e]; lv++) investedLv += (lv + 1) * 2 + (isHigh ? 3 : 0);
+    }
+  }
+  const refineCost = isHigh ? {moonstone:3} : {diamond:5};
+
+  const rows = toolExists ? ENCH_KEYS.map(e => {
+    const cur = ench[e];
+    const cost = (cur + 1) * 2 + (isHigh ? 3 : 0);
+    const can = cur < maxLv && state.level > cost;
+    return `<div class="craftItem ${can?'':'dis'}" data-ench="${e}" data-cost="${cost}"><div class="ci">${e==='eff'?'⚡':e==='for'?'🍀':'💰'}</div><div class="cn"><b>${ENCH_NAMES[e]} Lv.${cur} → ${cur+1} / ${maxLv}</b><small>消耗 ${cost} 等级 · ${ENCH_DESC[e][tab]}</small></div></div>`;
+  }).join('') : `<div style="color:var(--dim);padding:24px;text-align:center">未拥有该工具</div>`;
+
+  const refineCostStr = Object.entries(refineCost).map(([id,n]) => {
+    const ok = hasItem(id,n);
+    return `<span style="color:${ok?'var(--green)':'var(--red)'}">${def(id).icon}${def(id).name}×${n}</span>`;
+  }).join(' ');
+  const canRefine = toolExists && investedLv > 0 && Object.entries(refineCost).every(([id,n]) => hasItem(id,n));
+  const refineHTML = toolExists ? `<div class="craftItem ${canRefine?'':'dis'}" data-refine="1" style="grid-column:1/-1;margin-top:8px;border-color:#a06cf0"><div class="ci" style="color:#a06cf0">♻️</div><div class="cn"><b>洗练附魔（重置本工具所有附魔）</b><small>消耗 ${refineCostStr} · 退还约 ${investedLv} 等级 · 已投入 ${investedLv} 级</small></div></div>` : '';
+
+  openModal(`<h2>${isHigh?'✨ 高级附魔台':'🔮 低级附魔台'}<span>等级：${state.level} · 当前：${toolLabel}</span></h2>
+    <div class="tabs">
+      <div class="tab ${tab==='pick'?'active':''}" data-tab="pick">⛏️ 镐子</div>
+      <div class="tab ${tab==='axe'?'active':''}" data-tab="axe">🪓 斧头</div>
+      <div class="tab ${tab==='rod'?'active':''}" data-tab="rod">🎣 鱼竿</div>
+      <div class="tab" data-tab="divine" style="color:#a06cf0">✨ 神器</div>
+    </div>
+    <div class="craftList">${rows}${refineHTML}</div>
+    <div class="modalFoot"><button class="btn" id="mClose">关闭</button></div>`,
+    m => {
+      m.querySelector('#mClose').onclick = closeModal;
+      m.querySelectorAll('.tab').forEach(el => { el.onclick = () => openEnchant(tier, el.dataset.tab); });
+      m.querySelectorAll('.craftItem[data-ench]').forEach(el => {
+        el.onclick = () => {
+          if (el.classList.contains('dis')){ log('❌ 等级不足或已满级'); return; }
+          const e = el.dataset.ench, cost = +el.dataset.cost;
+          if (state.level <= cost){ log('❌ 等级不足'); return; }
+          state.level -= cost;
+          let need = xpNeed();
+          while (state.xp >= need && state.level >= 0){
+            state.xp -= need;
+            state.level++;
+            need = xpNeed();
+          }
+          if (tab === 'pick') state.tools[pickKey()][e]++;
+          else if (tab === 'axe') state.tools[axeKey()][e]++;
+          else state.tools[rodKey()][e]++;
+          log(`✨ ${tab==='pick'?'镐子':tab==='axe'?'斧头':'鱼竿'} ${ENCH_NAMES[e]} 提升到 Lv.${ench[e]+1}！`);
+          renderAll(); openEnchant(tier, tab);
+        };
+      });
+      const refineBtn = m.querySelector('[data-refine]');
+      if (refineBtn){
+        refineBtn.onclick = () => {
+          if (refineBtn.classList.contains('dis')){ log('❌ 材料不足或没有附魔可洗'); return; }
+          if (!confirm('确定洗练？将重置所有附魔并退还等级。')) return;
+          Object.entries(refineCost).forEach(([id,n]) => removeItem(id, n));
+          state.level += investedLv;
+          let need2 = xpNeed();
+          while (state.xp >= need2){
+            state.xp -= need2;
+            state.level++;
+            need2 = xpNeed();
+          }
+          if (tab === 'pick') state.tools[pickKey()] = {eff:0,for:0,pro:0};
+          else if (tab === 'axe') state.tools[axeKey()] = {eff:0,for:0,pro:0};
+          else state.tools[rodKey()] = {eff:0,for:0,pro:0};
+          log(`♻️ 洗练完成，退还 ${investedLv} 等级`);
+          renderAll(); openEnchant(tier, tab);
+        };
+      }
+    });
+}
+
+function openChest(){
+  const BASE_ORDER = Object.keys(DYE_BASES);
+  const COLOR_ORDER = DYE_RECIPES.map(r => r.color);
+  const sortKey = (id) => {
+    const parts = id.replace('dyed_', '').split('_');
+    const base = parts[0];
+    const color = parts.slice(1).join('_');
+    const bi = BASE_ORDER.indexOf(base);
+    const ci = COLOR_ORDER.indexOf(color);
+    return (bi < 0 ? 999 : bi) * 100 + (ci < 0 ? 999 : ci);
+  };
+  const inBag = Object.entries(state.inv).filter(([id,n]) => id.startsWith('dyed_') && n > 0).sort((a,b) => sortKey(a[0]) - sortKey(b[0]));
+  const inChest = Object.entries(state.chest).filter(([,n]) => n > 0).sort((a,b) => sortKey(a[0]) - sortKey(b[0]));
+  const bagHTML = inBag.length ? inBag.map(([id,n]) => {
+    const it = def(id);
+    const already = (state.chest[id]||0) >= 1;
+    return `<div class="craftItem ${already?'dis':''}" data-store="${id}"><div class="ci" style="filter:drop-shadow(0 0 4px ${it.color||'#ccc'})">${it.icon}</div><div class="cn"><b>${it.name} ×${n}</b><small>${already ? '<span style="color:var(--gold)">已收藏</span>' : '点击永久收藏（不可取出）'}</small></div></div>`;
+  }).join('') : `<div style="color:var(--dim);padding:16px;text-align:center;font-size:12px">背包里还没有染色品</div>`;
+  const chestHTML = inChest.length ? inChest.map(([id]) => {
+    const it = def(id);
+    return `<div class="craftItem" style="cursor:default"><div class="ci" style="filter:drop-shadow(0 0 4px ${it.color||'#ccc'})">${it.icon}</div><div class="cn"><b>${it.name}</b><small>已永久收藏 🔒</small></div></div>`;
+  }).join('') : `<div style="color:var(--dim);padding:16px;text-align:center;font-size:12px">箱子是空的</div>`;
+  const total = inChest.length;
+  const totalMax = Object.keys(DYE_BASES).length * DYE_RECIPES.length;
+  openModal(`<h2>📦 收藏箱<span>已收藏 ${total} / ${totalMax}</span></h2>
+    <div style="color:#a06cf0;font-size:11px;margin-bottom:10px;font-style:italic">"每件染色品的唯一收藏——放入后不可取出。"</div>
+    <h3 style="font-size:12px;color:var(--dim);margin:12px 0 6px">背包中的染色品</h3><div class="craftList">${bagHTML}</div>
+    <h3 style="font-size:12px;color:var(--dim);margin:14px 0 6px">已收藏（永久）</h3><div class="craftList">${chestHTML}</div>
+    <div class="modalFoot"><button class="btn" id="mClose">关闭</button></div>`,
+    m => {
+      m.querySelector('#mClose').onclick = closeModal;
+      m.querySelectorAll('.craftItem[data-store]').forEach(el => {
+        el.onclick = () => {
+          const id = el.dataset.store;
+          if ((state.chest[id]||0) >= 1){ log('❌ 该染色品已经收藏过了'); return; }
+          const n = state.inv[id] || 0;
+          if (n <= 0) return;
+          removeItem(id, 1);
+          state.chest[id] = 1;
+          log(`📦 永久收藏：${def(id).name}（不可取出）`);
+          save(); renderAll(); openChest();
+        };
+      });
+    });
+}
+
+function openFishing(){
+  if (!state.rod){ log('🎣 你需要先在商店购买鱼竿'); return; }
+  const rod = RODS[state.rod];
+  const ench = getRodEnch();
+  openModal(`<h2>🎣 钓鱼<span>${rod.name} · 空钩率 ${(rod.miss*100).toFixed(0)}%</span></h2>
+    <div style="text-align:center;padding:24px 0;font-size:48px" id="fishEmoji">🌊</div>
+    <div style="text-align:center;color:var(--dim)" id="fishMsg">准备好了吗？</div>
+    <div class="modalFoot"><button class="btn gold" id="mCast">抛竿！</button><button class="btn" id="mClose">关闭</button></div>`,
+    m => {
+      m.querySelector('#mClose').onclick = closeModal;
+      m.querySelector('#mCast').onclick = () => {
+        const btn = m.querySelector('#mCast'), emo = m.querySelector('#fishEmoji'), msg = m.querySelector('#fishMsg');
+        btn.disabled = true; btn.textContent = '等待中…';
+        emo.textContent = '🎣'; msg.textContent = '浮标漂在水面上…';
+        let t = 0;
+        const waitTime = 4 + Math.random() * 6;
+        const windowSec = 0.75 + ench.eff * 0.1;
+        const iv = setInterval(() => {
+          t += 0.5;
+          emo.textContent = t % 1 ? '🎣' : '🌊';
+          if (t >= waitTime){
+            clearInterval(iv);
+            emo.textContent = '❗'; msg.textContent = '上钩了！快点击！';
+            const ok = setTimeout(() => { emo.textContent = '💨'; msg.textContent = '鱼跑了…'; btn.disabled = false; btn.textContent = '再抛一次'; emo.onclick = null; }, windowSec * 1000);
+            const handler = () => {
+              clearTimeout(ok);
+              const missRate = state.divineRod ? rod.miss * 0.5 : rod.miss;
+              if (Math.random() < missRate){ emo.textContent = '💨'; msg.textContent = '空钩！什么也没钓到…'; log('🎣 空钩！'); btn.disabled = false; btn.textContent = '再抛一次'; emo.onclick = null; return; }
+              let fishTable = rod.table;
+              if (state.divineRod){
+                fishTable = rod.table.map(([fid, w]) => fid === 'fish_legend' ? [fid, w + 5] : [fid, w]);
+              }
+              const id = weightedPick(fishTable);
+              addItem(id, 1); gainXp(8); progressTask('fish'); unlockCodex('fish', id);
+              emo.textContent = def(id).icon;
+              msg.textContent = `钓到了 ${def(id).name}！`;
+              log(`🎣 钓到 ${def(id).name}`);
+              btn.disabled = false; btn.textContent = '再抛一次';
+              emo.onclick = null;
+            };
+            emo.onclick = handler;
+          }
+        }, 500);
+      };
+    });
+}
+
+function openCodex(){
+  const sections = [
+    ['⛏️ 矿石', 'ore', Object.entries(ORES).map(([k,v]) => ({id:k, name:v.name, icon:v.icon}))],
+    ['🌾 作物', 'crop', [
+      ...Object.entries(CROPS).map(([k,v]) => ({id:k, name:v.name, icon:v.icon})),
+      {id:'maple', name:'枫树', icon:'🌳'},
+      {id:'bowl_rice', name:'碗装大米', icon:'🍚'},
+      {id:'bread', name:'面包', icon:'🍞'},
+      {id:'bread_gold', name:'金穗面包', icon:'🍞'},
+      {id:'bread_mutant', name:'变异面包', icon:'🍞'},
+      {id:'bowl_rice_gold', name:'金穗碗装大米', icon:'🍚'},
+      {id:'bowl_rice_mutant', name:'变异碗装大米', icon:'🍚'},
+      {id:'wheat_gold', name:'金穗小麦', icon:'✨'},
+      {id:'rice_gold', name:'金穗大米', icon:'✨'},
+      {id:'watermelon_gold', name:'金穗西瓜', icon:'✨'},
+      {id:'wheat_mutant', name:'变异小麦', icon:'🌾'},
+      {id:'rice_mutant', name:'变异大米', icon:'🍚'},
+      {id:'watermelon_mutant', name:'变异西瓜', icon:'🍉'},
+    ]],
+    ['🌸 花朵', 'flower', Object.entries(FLOWERS).map(([k,v]) => ({id:'flower_'+k, name:v.name, icon:v.icon}))],
+    ['🐟 鱼类', 'fish', [
+      {id:'fish_small', name:'小鱼', icon:'🐟'},
+      {id:'fish_carp', name:'鲤鱼', icon:'🐠'},
+      {id:'fish_gold', name:'金鱼', icon:'🐡'},
+      {id:'fish_legend', name:'传说鱼', icon:'🐉'},
+    ]],
+    ['🌟 稀有', 'rare', [
+      {id:'stardust', name:'星尘', icon:'🌟'},
+      {id:'stardust_fragment', name:'星尘碎片', icon:'✴️'},
+      {id:'golden_egg', name:'金蛋', icon:'🥚'},
+      {id:'rainbow_wool', name:'彩虹羊毛', icon:'🌈'},
+      {id:'iron_watermelon', name:'铁西瓜', icon:'🌑'},
+    ]],
+    ['🎨 染料', 'dye', DYE_RECIPES.map(r => ({id:r.color, name:r.name+'染料', icon:'🎨', color:r.hex}))],
+    ['🧵 染色物', 'dyed', Object.keys(DYE_BASES).flatMap(base => DYE_RECIPES.map(r => ({id:`dyed_${base}_${r.color}`, name:r.name+DYE_BASES[base].name, icon:DYE_BASES[base].icon, color:r.hex})))],
+  ];
+  const html = sections.map(([title, cat, list]) => {
+    const cells = list.map(e => {
+      const got = state.codex[cat][e.id];
+      return `<div class="invItem" title="${got ? e.name : '???'}" style="${got ? '' : 'opacity:.28;filter:grayscale(1)'}${got && e.color ? ';background:'+e.color+'33' : ''}"><span>${got ? e.icon : '❔'}</span></div>`;
+    }).join('');
+    return `<h3 style="font-size:12px;color:var(--dim);margin:14px 0 6px">${title}<span style="float:right">${list.filter(e=>state.codex[cat][e.id]).length} / ${list.length}</span></h3><div class="invGrid">${cells}</div>`;
+  }).join('');
+  openModal(`<h2>📖 全图鉴</h2>${html}<div class="modalFoot"><button class="btn" id="mClose">关闭</button></div>`, m => { m.querySelector('#mClose').onclick = closeModal; });
+}
+
+const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+let konamiBuffer = [];
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  konamiBuffer.push(key);
+  if (konamiBuffer.length > KONAMI.length) konamiBuffer.shift();
+  if (konamiBuffer.length === KONAMI.length && konamiBuffer.every((k,i) => k === KONAMI[i])){ konamiBuffer = []; triggerKonami(); }
+});
+function triggerKonami(){
+  if (state.eggsUnlocked.konami){ logEgg('🎮 你已经领取过 KONAMI 彩蛋了'); return; }
+  state.eggsUnlocked.konami = true;
+  state.coins += 1000;
+  logEgg('═══════════════════════════');
+  logEgg('🎮 ↑↑↓↓←→←→BA  ✨  KONAMI 密码正确！');
+  logEgg('💰 奖励：1000 金币');
+  logEgg('🎖️ 解锁彩蛋成就：老玩家');
+  logEgg('═══════════════════════════');
+  renderAll(); save();
+}
+function checkLateNightEgg(){
+  const now = new Date();
+  if (now.getHours() !== 3) return;
+  if (state.eggsUnlocked.lateNight) return;
+  state.eggsUnlocked.lateNight = true;
+  state.staminaMax += 50;
+  state.stamina = Math.min(state.staminaMax, state.stamina + 50);
+  logEgg('═══════════════════════════');
+  logEgg('🌙 凌晨 3 点……');
+  logEgg('   你感觉到一股神秘的力量涌入体内。');
+  logEgg('⚡ 体力上限永久 +50！');
+  logEgg('🎖️ 解锁彩蛋成就：夜猫子');
+  logEgg('═══════════════════════════');
+  renderAll(); save();
+}
+function handleStardustDrop(sourceMsg){
+  addItem('stardust', 1);
+  unlockCodex('rare', 'stardust');
+  if (!state.eggsUnlocked.stardust){
+    state.eggsUnlocked.stardust = true;
+    logEgg('═══════════════════════════');
+    logEgg('🌟 你挖到了传说中的【星尘】！');
+    logEgg('   这是矿工们口口相传的奇迹……');
+    logEgg('💰 价值 5000 金币');
+    logEgg('🎖️ 解锁彩蛋成就：观星者');
+    logEgg('═══════════════════════════');
+  } else {
+    logEgg(sourceMsg || '🌟 又一次挖到了星尘！');
+  }
+  renderAll();
+}
+
+const MERCHANT_STOCK = [
+  {id:'stardust', price:5500, name:'星尘', amt:1},
+  {id:'fish_legend', price:450, name:'传说鱼', amt:1},
+  {id:'maple_sapling', price:60, name:'枫树苗', amt:3},
+  {id:'__dye_pack__', price:100, name:'稀有染料包'},
+  {id:'__stamina_potion__', price:150, name:'体力药水'},
+  {id:'__mystery_seed__', price:450, name:'神秘种子'},
+  {id:'__lucky_box__', price:750, name:'神秘盲盒'},
+];
+function trySpawnMerchant(){
+  let hasMerchant = false;
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) if (state.map[r][c].type === 'merchant'){ hasMerchant = true; break; }
+  if (hasMerchant) return;
+  if (Math.random() > 0.015) return;
+  const empties = [];
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) if ((state.map[r][c].type === 'empty' || state.map[r][c].type === 'grass') && !isNearPlayerMaple(r,c)) empties.push([r,c]);
+  if (!empties.length) return;
+  const [r,c] = empties[Math.floor(Math.random()*empties.length)];
+  const origType = state.map[r][c].type;
+  const stock = [...MERCHANT_STOCK].sort(()=>Math.random()-0.5).slice(0,3);
+  state.merchant = {r, c, origType, items: stock.map(s => ({...s, sold:false})), expire: Date.now() + 5*60*1000};
+  state.map[r][c] = makeCell('merchant', {originalType: origType});
+  updateCell(r,c);
+  logEgg('═══════════════════════════');
+  logEgg('🧙 一位神秘的旅行商人出现在地图上！');
+  logEgg(`📍 位置：(${r}, ${c})  ·  5分钟后离开`);
+  logEgg('═══════════════════════════');
+  save();
+}
+function removeMerchant(){
+  if (!state.merchant) return;
+  const { r, c, origType } = state.merchant;
+  if (state.map[r] && state.map[r][c] && state.map[r][c].type === 'merchant'){ state.map[r][c] = makeCell(origType || 'empty'); updateCell(r,c); }
+  state.merchant = null; save();
+}
+let merchantInterval = null; // 用于存储计时器
+
+function openMerchant(){
+  if (!state.merchant){ log('❌ 商人已经离开了'); return; }
+  if (merchantInterval) clearInterval(merchantInterval);
+
+  const m = $('modal');
+  
+  // 1. 渲染商品列表 HTML 的函数
+  const getGoodsHTML = () => {
+    return state.merchant.items.map((item, i) => {
+      const it = item.id.startsWith('__') ? {icon: item.id === '__dye_pack__' ? '🎨' : item.id === '__stamina_potion__' ? '⚡' : item.id === '__lucky_box__' ? '🎁' : '🍀'} : def(item.id);
+      const sold = item.sold;
+      const can = !sold && state.coins >= item.price;
+      return `<div class="craftItem ${sold || !can ? 'dis' : ''}" data-idx="${i}"><div class="ci">${it.icon}</div><div class="cn"><b>${item.name}</b><small>${sold ? '已售罄' : `💰 ${item.price}`}</small></div></div>`;
+    }).join('');
+  };
+
+  // 2. 渲染回收列表 HTML 的函数
+  const getSellHTML = () => {
+    const dyePrice = state.merchant.dyePrice || 200;
+    const valuableItems = Object.entries(state.inv).filter(([id, n]) => {
+      if (n <= 0) return false;
+      if (id.startsWith('dyed_')) return true;
+      if (id.includes('_gold') && id !== 'wheat_gold' && id !== 'rice_gold' && id !== 'watermelon_gold') return true;
+      if (id.includes('_mutant') && id !== 'wheat_mutant' && id !== 'rice_mutant' && id !== 'watermelon_mutant') return true;
+      if (id === 'fish_legend') return true;
+      if (id === 'bowl_rice_gold' || id === 'bread_gold') return true;
+      return false;
+    });
+    
+    return valuableItems.length ? valuableItems.map(([id, n]) => {
+      const it = def(id);
+      let price = dyePrice;
+      if (id === 'fish_legend') price = 420;
+      else if (id === 'bowl_rice_gold') price = 500;
+      else if (id === 'bread_gold') price = 300;
+      else if (id.includes('_gold')) price = 200;
+      else if (id.includes('_mutant')) price = 150;
+      return `<div class="craftItem" data-sell="${id}" data-price="${price}" style="border-color:var(--gold)"><div class="ci" style="filter:drop-shadow(0 0 4px ${it.color||'#ccc'})">${it.icon}</div><div class="cn"><b>${it.name} ×${n}</b><small style="color:var(--gold)">点击回收：+${price}💰</small></div></div>`;
+    }).join('') : `<div style="color:var(--dim);padding:16px;text-align:center;font-size:12px">你背包里没有值得回收的高级物品</div>`;
+  };
+
+  // 3. 重新绑定点击事件的函数
+  const bindEvents = () => {
+    // 购买事件
+    m.querySelectorAll('.craftItem[data-idx]').forEach(el => {
+      el.onclick = () => {
+        if (el.classList.contains('dis')) return;
+        const item = state.merchant.items[+el.dataset.idx];
+        if (!item || item.sold || Date.now() > state.merchant.expire) return;
+        if (state.coins < item.price) return;
+        
+        state.coins -= item.price;
+        item.sold = true;
+        
+        if (item.id === '__stamina_potion__'){
+          state.stamina = Math.min(state.staminaMax, state.stamina + 50);
+          log('🧙 购买体力药水，+50 ⚡ 体力！');
+        } else if (item.id === '__dye_pack__'){
+          const rare = ['black','purple','magenta','pink','cyan','light_blue'];
+          const picks = [...rare].sort(()=>Math.random()-0.5).slice(0,3);
+          picks.forEach(c => addItem('dye_'+c, 1));
+          log('🧙 稀有染料包开出：' + picks.map(c => def('dye_'+c).name).join('、'));
+        } else if (item.id === '__mystery_seed__'){
+          addItem('seed_mystery', 1);
+          logEgg('🧙 获得了【神秘种子】——种下后必出金穗！');
+        } else if (item.id === '__lucky_box__'){
+          const boxPool = [['diamond', 40], ['moonstone', 25], ['emerald', 15], ['sapphire', 5], ['stardust_fragment', 10], ['stardust', 3], ['iron_watermelon', 2]];
+          const win = weightedPick(boxPool);
+          addItem(win, 1);
+          if (['diamond','moonstone','emerald','sapphire'].includes(win)) unlockCodex('ore', win);
+          else unlockCodex('rare', win);
+          if (win === 'stardust' || win === 'iron_watermelon') logEgg(`🎁✨✨✨ 卧槽！盲盒里开出了传说中的【${def(win).name}】！！！`);
+          else logEgg(`🎁✨ 打开神秘盲盒！获得了【${def(win).name}】×1！`);
+        } else {
+          addItem(item.id, item.amt || 1);
+          log(`🧙 购买了 ${def(item.id).name} ×${item.amt||1}（-${item.price}💰）`);
+        }
+        
+        renderAll(); save(); updateUI(); // 更新 UI
+      };
+    });
+
+    // 回收事件
+    m.querySelectorAll('.craftItem[data-sell]').forEach(el => {
+      el.onclick = () => {
+        const id = el.dataset.sell;
+        const price = +el.dataset.price;
+        if (!hasItem(id, 1) || Date.now() > state.merchant.expire) return;
+        removeItem(id, 1);
+        state.coins += price;
+        progressTask('sell');
+        log(`🧙 商人高价回收了你的 ${def(id).name}，+${price}💰！`);
+        renderAll(); save(); updateUI(); // 更新 UI
+      };
+    });
+  };
+
+  // 4. 核心更新 UI 的方法（不重绘整个弹窗，只替换内容）
+  const updateUI = () => {
+    const remain = Math.max(0, Math.floor((state.merchant.expire - Date.now()) / 1000));
+    const timeEl = m.querySelector('#merchant-time');
+    if (timeEl) timeEl.textContent = `剩余 ${remain}s`;
+    
+    // 如果时间到了，自动关门赶人
+    if (remain <= 0) {
+      clearInterval(merchantInterval);
+      removeMerchant();
+      closeModal();
+      logEgg('🧙 商人摇了摇头，消失在迷雾中……');
+      return;
+    }
+
+    // 获取最新的 HTML
+    const goodsHTML = getGoodsHTML();
+    const sellHTML = getSellHTML();
+    
+    // 独立判断两个列表是否需要更新
+    let changed = false;
+    const goodsEl = m.querySelector('#goodsList');
+    const sellEl = m.querySelector('#sellList');
+    
+    if (goodsEl && goodsEl.innerHTML !== goodsHTML) {
+      goodsEl.innerHTML = goodsHTML;
+      changed = true;
+    }
+    if (sellEl && sellEl.innerHTML !== sellHTML) {
+      sellEl.innerHTML = sellHTML;
+      changed = true;
+    }
+    
+    if (changed) {
+      bindEvents(); // 只要有任意一个列表刷新了，就重新绑定事件
+    }
+  };
+
+  // 5. 第一次打开面板
+  openModal(`<h2>🧙 神秘商人<span id="merchant-time" style="color:var(--red);font-weight:bold">剩余 ${Math.max(0, Math.floor((state.merchant.expire - Date.now()) / 1000))}s</span></h2>
+    <div style="color:#a06cf0;font-size:12px;margin-bottom:12px;font-style:italic">"旅行者……我这有些别处买不到的东西……"</div>
+    <h3 style="font-size:12px;color:var(--dim);margin:12px 0 6px">他的商品（点击购买）</h3>
+    <div class="craftList" id="goodsList">${getGoodsHTML()}</div>
+    <h3 style="font-size:12px;color:var(--dim);margin:14px 0 6px">黑市高价回收</h3>
+    <div class="craftList" id="sellList">${getSellHTML()}</div>
+    <div class="modalFoot"><button class="btn" id="mClose">离开</button></div>`,
+    (modalEl) => {
+      modalEl.querySelector('#mClose').onclick = () => { clearInterval(merchantInterval); closeModal(); };
+      bindEvents(); // 第一次绑定事件
+    }
+  );
+
+  // 6. 启动 1 秒心跳，专门用来扣倒计时和自动刷新状态
+  merchantInterval = setInterval(updateUI, 1000);
+}
+
+function checkForestKing(){
+  if (state.treesChopped >= 50 && !state.eggsUnlocked.forestKing){
+    state.eggsUnlocked.forestKing = true;
+    state.coins += 1000;
+    logEgg('═══════════════════════════');
+    logEgg('🌳 你已经砍倒了 50 棵枫树！');
+    logEgg('   The Forest bows to you.');
+    logEgg('👑 解锁称号：森林之王');
+    logEgg('💰 奖励：1000 金币');
+    logEgg('═══════════════════════════');
+    renderAll(); save();
+  }
+}
+
+setInterval(() => {
+  state.tick++;
+  spreadAllFlowers();
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++){
+    const d = state.map[r][c];
+        if ((d.type === 'dirt' || d.type === 'farmland') && d.crop){
+      if (!d.crop.watered && (state.weather.type === 'rain' || state.weather.type === 'thunder')){
+        d.crop.watered = true;
+        updateCell(r,c);
+      }
+    }
+    // ★ 新增：雷雨期间持续判定变异（每 6 秒 2% 概率）
+    if ((d.type === 'dirt' || d.type === 'farmland') && d.crop && d.crop.watered && d.crop.stage < CROPS[d.crop.id].grow){
+            if (state.weather.type === 'thunder' && !d.crop.mutant && !d.crop.lucky && Math.random() < 0.005){
+        d.crop.mutant = true;
+        updateCell(r,c);
+        logEgg(`⛈️✨ 雷雨击中了一株【${CROPS[d.crop.id].name}】，发生了变异！`);
+      }
+    }
+    if ((d.type === 'dirt' || d.type === 'farmland') && d.crop && d.crop.watered && d.crop.stage < CROPS[d.crop.id].grow){
+      if (state.weather.type === 'snow') continue;
+      const interval = d.type === 'farmland' ? 7 : 10;
+      d.crop.counter = (d.crop.counter || 0) + 1;
+      if (d.crop.counter >= interval){ d.crop.counter = 0; d.crop.stage++; updateCell(r,c); if (d.crop.stage >= CROPS[d.crop.id].grow) log(`🌾 ${CROPS[d.crop.id].name} 成熟了！`); }
+    }
+    if (d.type === 'sapling' && d.saplingStage < 2){
+      const interval = d.saplingSpeed === 'fast' ? 7 : 10;
+      d.saplingCounter = (d.saplingCounter || 0) + 1;
+      if (d.saplingCounter >= interval){
+        d.saplingCounter = 0; d.saplingStage++; updateCell(r,c);
+if (d.saplingStage >= 2){ state.map[r][c] = makeCell('tree', {hp:16, maxHp:16, originalType: d.originalType || 'empty', planted: d.planted}); updateCell(r,c); log('🌳 枫树长成了！'); }
+      }
+    }
+  }
+}, 6000);
+
+setInterval(() => {
+  let clayCount = 0; const waters = [];
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++){
+    const t = state.map[r]?.[c]?.type;
+    if (t === 'clay') clayCount++;
+    else if (t === 'water') waters.push([r,c]);
+  }
+  if (clayCount < 10 && waters.length && Math.random() < 0.5){
+    const [r,c] = waters[Math.floor(Math.random()*waters.length)];
+    state.map[r][c].type = 'clay'; updateCell(r,c);
+  }
+}, 30000);
+
+setInterval(() => {
+  let sandCount = 0; const empties = [];
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++){
+    const t = state.map[r]?.[c]?.type;
+    if (t === 'sand') sandCount++;
+    else if (t === 'empty'){
+      let nearWater = false;
+      for (let dr=-2; dr<=2 && !nearWater; dr++) for (let dc=-2; dc<=2 && !nearWater; dc++){
+        const t2 = state.map[r+dr]?.[c+dc]?.type;
+        if (t2 === 'water' || t2 === 'clay') nearWater = true;
+      }
+      if (nearWater) empties.push([r,c]);
+    }
+  }
+  if (sandCount < 15 && empties.length && Math.random() < 0.8){
+    const [r,c] = empties[Math.floor(Math.random()*empties.length)];
+    state.map[r][c].type = 'sand'; updateCell(r,c);
+  }
+}, 30000);
+setInterval(rollWeatherAndEvent, 60 * 1000);
+setInterval(() => {
+  if (state.stamina < state.staminaMax){
+    let rate = 1;
+    if (state.weather.type === 'rain') rate = 2;
+    if (state.dailyEvent.buff === 'stamina_regen') rate = 2;
+    if (state.divineCrown) rate *= 2;
+    gainStamina(rate);
+  }
+}, 30000);
+
+setInterval(() => {
+  if (state.merchant && Date.now() > state.merchant.expire){
+    logEgg('🧙 神秘商人消失在了迷雾中……');
+    removeMerchant();
+    return;
+  }
+  trySpawnMerchant();
+}, 60000);
+function migrateGachaWish(){
+  // 找当前 gacha 位置
+  let curGacha = null;
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++){
+    if (state.map[r][c].type === 'gacha') curGacha = [r,c];
+  }
+  
+  const gachaTarget = [2, 1];
+  const inRange = (pos, tgt) => pos && Math.abs(pos[0]-tgt[0]) <= 1 && Math.abs(pos[1]-tgt[1]) <= 1;
+  
+  let changed = false;
+  
+  // 如果 gacha 不在目标位置，删掉旧的
+  if (curGacha && !inRange(curGacha, gachaTarget)){
+    state.map[curGacha[0]][curGacha[1]] = makeCell('empty');
+    changed = true;
+    curGacha = null;
+  }
+  
+  // 如果没有 gacha，放到左上角附近
+  if (!curGacha){
+    const spots = [];
+    for (let dr=-1;dr<=1;dr++) for (let dc=-1;dc<=1;dc++) spots.push([gachaTarget[0]+dr, gachaTarget[1]+dc]);
+    for (let r2=0;r2<=5;r2++) for (let c2=0;c2<=5;c2++) spots.push([r2, c2]);
+    for (const [r,c] of spots){
+      if (r<0||r>=ROWS||c<0||c>=COLS) continue;
+      const t = state.map[r][c].type;
+      if (t === 'empty' || t === 'grass' || t === 'sand' || t === 'clay' || t === 'flower'){
+        state.map[r][c] = makeCell('gacha');
+        changed = true;
+        break;
+      }
+    }
+  }
+  
+  // wish_well 保持原位不动，只有在完全没有时才补一个到右上角
+  let hasWish = false;
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) if (state.map[r][c].type === 'wish_well'){ hasWish = true; break; }
+  if (!hasWish){
+    const wishSpots = [[2,23],[2,22],[1,23],[1,22],[3,23],[3,22]];
+    for (const [r,c] of wishSpots){
+      if (r<0||r>=ROWS||c<0||c>=COLS) continue;
+      const t = state.map[r][c].type;
+      if (t === 'empty' || t === 'grass' || t === 'sand' || t === 'clay' || t === 'flower'){
+        state.map[r][c] = makeCell('wish_well');
+        changed = true;
+        break;
+      }
+    }
+  }
+  
+  if (changed){ if (cellEls.length) renderMapAll(); save(); log('🏗️ 扭蛋机移到左上角，许愿池保留在右上角'); }
+}
+
+
+function init(){
+  const migrated = migrateSave();
+  if (migrated) log(`🔄 从旧存档「${migrated.from}」迁移成功`);
+
+  const loaded = load();
+  const mapOK = state.map && state.map.length === ROWS && state.map[0] && state.map[0].length === COLS;
+
+  if (!loaded || !mapOK){
+    genMap();
+    if (loaded) log('⚠️ 地图数据异常，已重新生成');
+    else {
+      log('👋 欢迎来到《枫之谷》！');
+      log('🎰 扭蛋机、每日签到、天气系统');
+      log('✨ 收获时 2% 概率出金穗作物（售价 ×5）');
+      log('🐾 动物好感度系统：喂满 5 天可产稀有物品');
+      log('⛏️ 附魔台可合成神器：星辰镐 / 丰饶锄 / 海神竿等');
+      logEgg('🥚 隐藏彩蛋等你发现……');
+    }
+    save();
+  } else {
+    log('💾 存档已加载，欢迎回来！');
+    if (!state._farmlandFixDone){
+      let fixed = 0;
+      for (let r=7; r<=15; r++) for (let c=3; c<=11; c++) if (state.map[r][c].type === 'empty'){ state.map[r][c] = makeCell('dirt'); fixed++; }
+      state._farmlandFixDone = true;
+      if (fixed > 0) log(`🔧 修复了 ${fixed} 个农田区内的空格子`);
+      save();
+    }
+    migrateGachaWish();
+  }
+
+  if (!state.playerName){
+    buildMapDom(); renderAll(); checkLateNightEgg(); rollWeatherAndEvent(); genDailyTasks();
+    setTimeout(() => openNameSetup(), 300);
+    return;
+  }
+
+  checkLateNightEgg();
+  rollWeatherAndEvent();
+  genDailyTasks();
+  snapshotBackup();
+  buildMapDom();
+  renderAll();
+}
+
+$('map').addEventListener('click', e => { const el = e.target.closest('.cell'); if (!el) return; onCellClick(+el.dataset.r, +el.dataset.c); });
+$('btnEat').onclick = openEatMenu;
+$('btnCodex').onclick = openCodex;
+$('btnSave').onclick = openSaveManager;
+$('btnCheckin').onclick = openCheckin;
+$('btnGuide').onclick = openGuide;
+$('btnReset').onclick = () => {
+  if (!confirm('确定重置所有进度？此操作不可撤销！')) return;
+  _isResetting = true;
+  window.removeEventListener('beforeunload', save);
+  try { for (const k of Object.keys(localStorage)) if (k.startsWith('bloxd_farm_save')) localStorage.removeItem(k); } catch(e){}
+  location.reload();
+};
+
+init();
+</script>
+</body>
+</html>
