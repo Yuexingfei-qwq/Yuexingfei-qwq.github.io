@@ -3,18 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>个人主页</title>
+  <title>Yxf's Page</title>
   <style>
-    /* ===== 1. 页面基础与背景设置 ===== */
     body {
-      /* 背景图片（替换成你的真实图片链接） */
-      background-image: url('images/Brain Rot.jpeg');
-      background-size: cover;          /* 图片铺满全屏 */
-      background-position: center;     /* 图片居中显示 */
-      background-repeat: no-repeat;    /* 不重复 */
-      background-attachment: fixed;    /* 滚动时背景固定（可删） */
+      background-image: url('images/Brain Rot.jpg');
+      background-size: cover; 
+      background-position: center; 
+      background-repeat: no-repeat; 
+      background-attachment: fixed; 
       
-      /* 字体颜色设为白色，并加一点文字阴影防看不清 */
       color: #ffffff;
       text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8);
       
@@ -24,13 +21,10 @@
       padding: 0 20px;
       line-height: 1.6;
       
-      /* 确保内容在最上层 */
       position: relative;
       z-index: 1;
     }
 
-    /* ===== 2. 半透明黑色遮罩 ===== */
-    /* 这个伪元素会在背景图上方盖一层半透明黑色，让白字更清晰 */
     body::before {
       content: "";
       position: fixed;
@@ -38,13 +32,12 @@
       left: 0; 
       width: 100%; 
       height: 100%;
-      background: rgba(0, 0, 0, 0.4); /* 0.4是透明度，数字越大越黑（0~1之间） */
-      z-index: -1; /* 放在背景图和文字之间 */
+      background: rgba(0, 0, 0, 0.4);
+      z-index: -1;
     }
 
-    /* ===== 3. 链接样式 ===== */
     a {
-      color: #b3e5fc; /* 浅蓝色链接，在深色背景上更显眼 */
+      color: #b3e5fc;
       text-decoration: none;
     }
     a:hover {
@@ -74,7 +67,19 @@
 
   <h2>链接 link</h2>
   <ul>
-    <li>开发中……<li>
+    <li>原创游戏：</li>
+<p style="margin-top: 20px;">
+  <a href="领地战.html" style="display: inline-block; padding: 10px 20px; background-color: #ffd700; color: #333; text-decoration: none; border-radius: 5px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+    领地战
+  </a>
+  ---Code by 豆包
+  <p style="margin-top: 20px;">
+  <a href="枫之谷.html" style="display: inline-block; padding: 10px 20px; background-color: #ffd700; color: #333; text-decoration: none; border-radius: 5px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+    枫之谷
+  </a>
+  ---Code by Deepseek
+
+</p>
   </ul>
 </body>
 </html>
