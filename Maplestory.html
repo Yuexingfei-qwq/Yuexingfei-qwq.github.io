@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Maple Story 枫之谷</title>
+<title>枫之谷</title>
 <style>
 :root{--bg:#f5f7fa;--panel:#fff;--panel2:#eef1f5;--line:#d8dee6;--text:#1f2530;--dim:#6b7684;--gold:#c99a00;--green:#2f9e4f;--blue:#2c6fd1;--purple:#7a3fc0;--red:#d63a3a;--stam:#e08a2a;--rain:#4d8bf0;--snow:#9ad4f5;--sun:#f5c542;--thunder:#7a3fc0}
 *{box-sizing:border-box}html,body{height:100%;margin:0}
@@ -390,6 +390,7 @@ const state = {
   weather: { lastChange: 0, type: 'sunny' },
   dailyEvent: {date:'', text:'', buff:''},
   totalStaminaBonus: 0,
+  mapBaseOres: 0, mapBaseTrees: 0, mapBaseGrass: 0, mapBaseFlowers: 0,
   levelSpeedBonus: 0,
   levelMilestones: [],
   xpBonusCarry: 0,
@@ -740,11 +741,18 @@ function sellOne(id){
   removeItem(id, 1);
   let price = it.sell;
   const proBonus = getProBonus(id);
-  if (proBonus > 0) price = Math.floor(price * (1 + proBonus));
-  if (state.dailyEvent.buff === 'sell_bonus') price = Math.floor(price * 1.2);
-  if (state.divineSunRobe) price = Math.floor(price * 1.5);
+  // 把所有加成乘在一起，最后只取整一次！
+  let multiplier = 1;
+  if (proBonus > 0) multiplier += proBonus;
+  if (state.dailyEvent.buff === 'sell_bonus') multiplier += 0.2;
+  if (state.divineSunRobe) multiplier += 0.5;
+  
+  if (multiplier > 1) {
+    price = Math.ceil(price * multiplier); // 统一用向上取整，保证不亏
+  }
   state.coins += price;
   progressTask('sell');
+  gainXp(Math.max(1, Math.floor(price / 10))); // 新增经验
   log(`💵 卖出 ${it.name} +${price}💰`);
   renderTop(); renderInventory();
 }
@@ -924,6 +932,10 @@ out.chest  = d.chest  && typeof d.chest  === 'object' ? {...d.chest}  : {};
   out.eggsUnlocked = d.eggsUnlocked && typeof d.eggsUnlocked === 'object' ? d.eggsUnlocked : {};
   out.merchant = d.merchant || null;
   out.gachaPity = typeof d.gachaPity === 'number' ? d.gachaPity : 0;
+  out.mapBaseOres = typeof d.mapBaseOres === 'number' ? d.mapBaseOres : 0;
+  out.mapBaseTrees = typeof d.mapBaseTrees === 'number' ? d.mapBaseTrees : 0;
+  out.mapBaseGrass = typeof d.mapBaseGrass === 'number' ? d.mapBaseGrass : 0;
+  out.mapBaseFlowers = typeof d.mapBaseFlowers === 'number' ? d.mapBaseFlowers : 0;
   out.staminaShop = d.staminaShop && typeof d.staminaShop === 'object' ? d.staminaShop : {date:'', count:0};
   out.checkin = d.checkin && typeof d.checkin === 'object' ? d.checkin : {lastDate:'', streak:0, weekStart:''};
     if (d.weather && typeof d.weather === 'object'){
@@ -977,6 +989,10 @@ function buildSaveData(){
     treesChopped: state.treesChopped, eggsUnlocked: state.eggsUnlocked, merchant: state.merchant,
     gachaPity: state.gachaPity, staminaShop: state.staminaShop, checkin: state.checkin,
     weather: state.weather, dailyEvent: state.dailyEvent, totalStaminaBonus: state.totalStaminaBonus,
+    mapBaseOres: state.mapBaseOres,
+    mapBaseTrees: state.mapBaseTrees,
+    mapBaseGrass: state.mapBaseGrass,
+    mapBaseFlowers: state.mapBaseFlowers,
     levelSpeedBonus: state.levelSpeedBonus,
     levelMilestones: state.levelMilestones,
     xpBonusCarry: state.xpBonusCarry,
@@ -2121,15 +2137,21 @@ function openShop(){
           if (it.sell >= 1){
             let price = it.sell;
             const proBonus = getProBonus(id);
-            if (proBonus > 0) price = Math.floor(price * (1 + proBonus));
-            if (state.dailyEvent.buff === 'sell_bonus') price = Math.floor(price * 1.2);
-            if (state.divineSunRobe) price = Math.floor(price * 1.5);
+            let multiplier = 1;
+            if (proBonus > 0) multiplier += proBonus;
+            if (state.dailyEvent.buff === 'sell_bonus') multiplier += 0.2;
+            if (state.divineSunRobe) multiplier += 0.5;
+            
+            if (multiplier > 1) {
+              price = Math.ceil(price * multiplier);
+            }
             total += price * state.inv[id]; kinds++;
             delete state.inv[id];
           }
         }
         if (total === 0){ log('💤 没有可出售的东西'); return; }
         state.coins += total; progressTask('sell');
+        gainXp(Math.max(1, Math.floor(total / 10))); // 新增经验结算
         log(`💰 出售了 ${kinds} 种物品，共获得 ${total} 金币`);
         renderAll(); openShop();
       };
@@ -2354,10 +2376,12 @@ function openChest(){
           if ((state.chest[id]||0) >= 1){ log('❌ 该染色品已经收藏过了'); return; }
           const n = state.inv[id] || 0;
           if (n <= 0) return;
-          removeItem(id, 1);
-          state.chest[id] = 1;
-          log(`📦 永久收藏：${def(id).name}（不可取出）`);
-          save(); renderAll(); openChest();
+        removeItem(id, 1);
+        state.coins += price;
+        progressTask('sell');
+        gainXp(Math.max(1, Math.floor(price / 10))); // 新增经验
+        log(`🧙 商人高价回收了你的 ${def(id).name}，+${price}💰！`);
+        renderAll(); save(); updateUI(); // 更新 UI
         };
       });
     });
@@ -2881,6 +2905,73 @@ function init(){
       state._farmlandFixDone = true;
       if (fixed > 0) log(`🔧 修复了 ${fixed} 个农田区内的空格子`);
       save();
+    }
+    let ores = 0, trees = 0, grass = 0, flowers = 0;
+    for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++){
+      const t = state.map[r][c].type;
+      if (t === 'rock') ores++;
+      if (t === 'tree') trees++;
+      if (t === 'grass') grass++;
+      if (t === 'flower') flowers++;
+    }
+
+    // ★ 记录原本的上限（第一次运行时自动测量并保存）
+    if (!state.mapBaseOres) {
+      state.mapBaseOres = ores >= 30 ? ores : 35; // 如果已经被卡空，强行给个健康保底35
+      state.mapBaseTrees = trees >= 20 ? trees : 25;
+      state.mapBaseGrass = grass >= 20 ? grass : 30;
+      state.mapBaseFlowers = flowers >= 20 ? flowers : 30;
+    }
+
+    // 1. 补矿石（按记录的上限补）
+    if (ores < state.mapBaseOres) {
+      for (let i=0; i<state.mapBaseOres-ores; i++){
+        const empties = [];
+        for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) if (state.map[r][c].type==='empty' && !isNearPlayerMaple(r,c)) empties.push([r,c]);
+        if (!empties.length) break;
+        const [r,c] = empties[Math.floor(Math.random()*empties.length)];
+        const o = weightedPick(ORE_WEIGHTS);
+        state.map[r][c] = makeCell('rock', {variant:o, hp:ORES[o].hp, maxHp:ORES[o].hp});
+        updateCell(r,c);
+      }
+      logEvent(`⛏️ 矿脉复苏：地图已恢复到最初的 ${state.mapBaseOres} 个矿石`);
+    }
+
+    // 2. 补树
+    if (trees < state.mapBaseTrees) {
+      for (let i=0; i<state.mapBaseTrees-trees; i++){
+        const empties = [];
+        for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) if (state.map[r][c].type==='empty' && !inFarmArea(r,c) && !isNearPlayerMaple(r,c)) empties.push([r,c]);
+        if (!empties.length) break;
+        const [r,c] = empties[Math.floor(Math.random()*empties.length)];
+        state.map[r][c] = makeCell('tree', {hp:16, maxHp:16});
+        updateCell(r,c);
+      }
+      logEvent(`🌳 森林复苏：地图已恢复到最初的 ${state.mapBaseTrees} 棵树`);
+    }
+
+    // 3. 补草和花
+    if (grass < state.mapBaseGrass) {
+      for (let i=0; i<state.mapBaseGrass-grass; i++){
+        const empties = [];
+        for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) if (state.map[r][c].type==='empty') empties.push([r,c]);
+        if (!empties.length) break;
+        const [r,c] = empties[Math.floor(Math.random()*empties.length)];
+        state.map[r][c] = makeCell('grass');
+        updateCell(r,c);
+      }
+    }
+    
+    if (flowers < state.mapBaseFlowers) {
+      const flowerPairs = Object.entries(FLOWERS).map(([k,v])=>['flower_'+k, v.weight]);
+      for (let i=0; i<state.mapBaseFlowers-flowers; i++){
+        const empties = [];
+        for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) if (state.map[r][c].type==='empty') empties.push([r,c]);
+        if (!empties.length) break;
+        const [r,c] = empties[Math.floor(Math.random()*empties.length)];
+        state.map[r][c] = makeCell('flower', {variant: weightedPick(flowerPairs).replace('flower_','')});
+        updateCell(r,c);
+      }
     }
     migrateGachaWish();
   }
