@@ -32,8 +32,8 @@ body{background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-syste
 .cell.workbench,.cell.chest,.cell.shop,.cell.artisan,.cell.gacha{background:#e0c888}
 .cell.furnace{background:#c8b088}
 .cell.wish_well{background:#b8d8f0}
-.cell.enchant_low,.cell.enchant_high{background:#c8b0e8}
-.cell.enchant_low.locked,.cell.enchant_high.locked{background:#b8b8c8;color:#666}
+.cell.enchant{background:#c8b0e8}
+.cell.enchant.locked{background:#b8b8c8;color:#666}
 .cell.animal{background:#c0d8a8}
 .cell.animal.hasLove{background:linear-gradient(135deg,#ffe6f0,#f0c8a8)}
 .cell.mutant::after{content:'⚡';position:absolute;top:-2px;left:-2px;font-size:14px;text-shadow:0 0 4px #a06cf0, 0 0 2px #fff;z-index:5;pointer-events:none}
@@ -156,8 +156,7 @@ body{background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-syste
       <div class="toolRow"><span>🎣 鱼竿</span><b id="tRod">未拥有</b></div>
       <div class="toolRow"><span>🌾 镰刀</span><b id="tSickle">未拥有</b></div>
       <div style="border-top:1px solid var(--line);margin:6px 0"></div>
-      <div class="toolRow"><span>🔮 低级附魔台</span><b id="tEnchLow">🔒 未解锁</b></div>
-      <div class="toolRow"><span>✨ 高级附魔台</span><b id="tEnchHigh">🔒 未解锁</b></div>
+      <div class="toolRow"><span>🔮 附魔台</span><b id="tEnch">🔒 未解锁</b></div>
       <div style="border-top:1px solid var(--line);margin:6px 0"></div>
       <div class="toolRow"><span>⛏️ 星辰镐</span><b id="tDivinePick">未拥有</b></div>
       <div class="toolRow"><span>🌾 丰饶锄</span><b id="tDivineHoe">未拥有</b></div>
@@ -383,7 +382,7 @@ const state = {
   inv: {}, chest: {}, map: [], locked: {},
   codex: {ore:{},crop:{},dye:{},dyed:{},flower:{},fish:{},rare:{}},
   selected: null, tick: 0, tasks: [], taskDate: '',
-  hasBowlEver: false, enchLowUnlocked: false, enchHighUnlocked: false,
+  hasBowlEver: false,   enchUnlocked: false,
   treesChopped: 0, eggsUnlocked: {}, merchant: null,
   gachaPity: 0, staminaShop: {date:'', count:0},
   checkin: {lastDate:'', streak:0, weekStart:''},
@@ -413,10 +412,16 @@ function getAxeEnch(){ return state.tools[axeKey()] || {eff:0,for:0,pro:0}; }
 function getRodEnch(){ return state.tools[rodKey()] || {eff:0,for:0,pro:0}; }
 function getProBonus(id){
   const src = PRO_SOURCE[id];
-  if (src === 'pick') return getPickEnch().pro * 0.10;
-  if (src === 'axe') return getAxeEnch().pro * 0.10;
-  if (src === 'rod') return getRodEnch().pro * 0.10;
-  return 0;
+  let proLv = 0;
+  if (src === 'pick') proLv = getPickEnch().pro;
+  else if (src === 'axe') proLv = getAxeEnch().pro;
+  else if (src === 'rod') proLv = getRodEnch().pro;
+  
+  if (proLv === 0) return 0;
+  // 1~3级每级10%，4~5级每级15%
+  let low = Math.min(3, proLv);
+  let high = Math.max(0, proLv - 3);
+  return low * 0.10 + high * 0.15;
 }
 
 const $ = id => document.getElementById(id);
@@ -514,8 +519,8 @@ function genMap(){
     if (right < COLS && m[r][right].type === 'empty') m[r][right] = makeCell('sand');
   }
   m[5][3]=makeCell('workbench'); m[5][4]=makeCell('artisan'); m[5][5]=makeCell('chest');
-  m[5][6]=makeCell('shop'); m[5][7]=makeCell('furnace'); m[5][8]=makeCell('enchant_low');
-m[5][9]=makeCell('enchant_high');
+  m[5][6]=makeCell('shop'); m[5][7]=makeCell('furnace'); m[5][8]=makeCell('enchant');
+m[5][9]=makeCell('empty');
 m[2][1]=makeCell('gacha'); m[2][23]=makeCell('wish_well');
   m[6][3]=makeCell('animal', {animal:'chicken'}); m[6][4]=makeCell('animal', {animal:'cow'}); m[6][5]=makeCell('animal', {animal:'sheep'});
   const flowerPairs = Object.entries(FLOWERS).map(([k,v])=>['flower_'+k, v.weight]);
@@ -557,8 +562,7 @@ function cellIcon(d){
     case 'workbench': return '🛠️'; case 'artisan': return '🎨'; case 'chest': return '📦';
     case 'wish_well': return '⛲';
     case 'shop': return '🏪'; case 'furnace': return '🔥'; case 'gacha': return '🎰';
-    case 'enchant_low': return state.enchLowUnlocked ? '🔮' : '🔒';
-    case 'enchant_high': return state.enchHighUnlocked ? '✨' : '🔒';
+    case 'enchant': return state.enchUnlocked ? '🔮' : '🔒';
     case 'animal': return d.animal==='chicken'?'🐔':d.animal==='cow'?'🐄':d.animal==='sheep'?'🐑':'🐾';
     case 'merchant': return '🧙';
     case 'sapling': return d.saplingStage >= 1 ? '🌿' : '🌱';
@@ -584,8 +588,7 @@ function updateCell(r,c){
   if (!el) return;
   let cls = 'cell ' + d.type;
   if (d.type === 'flower' && d.originalType) cls += ' on-' + d.originalType;
-  if (d.type === 'enchant_low' && !state.enchLowUnlocked) cls += ' locked';
-  if (d.type === 'enchant_high' && !state.enchHighUnlocked) cls += ' locked';
+  if (d.type === 'enchant' && !state.enchUnlocked) cls += ' locked';
   if (d.type === 'animal' && d.love >= 5) cls += ' hasLove';
   if ((d.type === 'dirt' || d.type === 'farmland') && d.crop && d.crop.mutant) cls += ' mutant';
   el.className = cls;
@@ -621,8 +624,7 @@ function renderTop(){
   $('tAxe').textContent = state.axe ? AXES[state.axe].name : '未拥有';
   $('tRod').textContent = state.rod ? RODS[state.rod].name : '未拥有';
   $('tSickle').textContent = state.hasSickle ? '已拥有' : '未拥有';
-  $('tEnchLow').textContent = state.enchLowUnlocked ? '✅ 已解锁' : '🔒 未解锁';
-  $('tEnchHigh').textContent = state.enchHighUnlocked ? '✅ 已解锁' : '🔒 未解锁';
+  $('tEnch').textContent = state.enchUnlocked ? '✅ 已解锁' : '🔒 未解锁';
   $('tDivinePick').textContent = state.divinePick ? '✅ 已拥有' : '未拥有';
   $('tDivineHoe').textContent = state.divineHoe ? '✅ 已拥有' : '未拥有';
   $('tDivineRod').textContent = state.divineRod ? '✅ 已拥有' : '未拥有';
@@ -1398,26 +1400,37 @@ function rollWeatherAndEvent(){
   }
 }
 
-function openEnchantUnlock(tier){
-  const isHigh = tier === 'high';
-  const name = isHigh ? '高级附魔台' : '低级附魔台';
-  const icon = isHigh ? '✨' : '🔮';
-  const needItem = isHigh ? 'diamond' : 'iron_ingot';
-  const needAmt = 3;
+function openEnchantUnlock(stage){
+  const isStage2 = stage === 2;
+  const title = isStage2 ? '二阶段' : '一阶段';
+  const needItem = isStage2 ? 'diamond' : 'iron_ingot';
+  const needAmt = isStage2 ? 4 : 10;
   const needInfo = def(needItem);
+  
   const can = hasItem(needItem, needAmt);
   const costHTML = `<span style="color:${can?'var(--green)':'var(--red)'}">${needInfo.icon}${needInfo.name}×${needAmt}</span>`;
-  openModal(`<h2>🔒 解锁${name}<span>需消耗材料</span></h2>
-    <div style="color:var(--dim);font-size:12px;margin-bottom:12px">附魔台是永久设施，解锁后永久可用。附魔本身还会消耗经验等级。</div>
-    <div class="craftList"><div class="craftItem ${can?'':'dis'}" data-unlock="1" style="grid-column:1/-1"><div class="ci">${icon}</div><div class="cn"><b>解锁${name}</b><small>消耗 ${costHTML} · 当前拥有 ${needInfo.icon}×${state.inv[needItem]||0}</small></div></div></div>
+  
+  openModal(`<h2>🔒 解锁附魔台 - ${title}<span>需消耗材料</span></h2>
+    <div style="color:var(--dim);font-size:12px;margin-bottom:12px">
+      ${isStage2 ? '解锁后可继续将附魔提升至 4~5 级，并获得额外效果加成。' : '解锁一阶段后，可将工具附魔提升至 3 级。'}
+    </div>
+    <div class="craftList">
+      <div class="craftItem ${can?'':'dis'}" data-unlock="${stage}" style="grid-column:1/-1">
+        <div class="ci">${isStage2 ? '✨' : '🔮'}</div>
+        <div class="cn"><b>解锁 ${title}</b><small>消耗 ${costHTML} · 当前拥有 ${needInfo.icon}×${state.inv[needItem]||0}</small></div>
+      </div>
+    </div>
     <div class="modalFoot"><button class="btn" id="mClose">关闭</button></div>`,
     m => {
       m.querySelector('#mClose').onclick = closeModal;
       m.querySelector('[data-unlock]').onclick = () => {
         if (!hasItem(needItem, needAmt)){ log(`❌ ${needInfo.name}不足（需要 ${needAmt} 个）`); return; }
         for (let i=0;i<needAmt;i++) removeItem(needItem, 1);
-        if (isHigh) state.enchHighUnlocked = true; else state.enchLowUnlocked = true;
-        log(`✨ 成功解锁${name}！`);
+        
+        if (isStage2) state.enchStage2Unlocked = true;
+        else state.enchStage1Unlocked = true;
+        
+        log(`✨ 成功解锁附魔台 ${title}！`);
         save(); renderAll(); renderMapAll(); closeModal();
       };
     });
@@ -1494,8 +1507,7 @@ function onCellClick(r,c){
     case 'gacha': openGacha(); break;
     case 'wish_well': openWishWell(); break;
     case 'merchant': openMerchant(); break;
-    case 'enchant_low': if (state.enchLowUnlocked) openEnchant('low'); else openEnchantUnlock('low'); break;
-    case 'enchant_high': if (state.enchHighUnlocked) openEnchant('high'); else openEnchantUnlock('high'); break;
+    case 'enchant': if (state.enchUnlocked) openEnchant(); else openEnchantUnlock(); break;
   }
 }
 
@@ -1778,11 +1790,16 @@ function doChopTree(r,c){
   if (!state.axe){ log('🪓 你需要先在商店购买斧头'); return false; }
   const d = state.map[r][c];
   const ench = getAxeEnch();
-  const dmg = AXES[state.axe].dmg + ench.eff;
+  const lowEff = Math.min(3, ench.eff);
+  const highEff = Math.max(0, ench.eff - 3);
+  const dmg = AXES[state.axe].dmg + (lowEff * 1 + highEff * 2);
   d.hp -= dmg;
   if (d.hp <= 0){
     let logN = randInt(3, 6);
-    if (ench.for > 0) logN += Math.floor(logN * ench.for * 0.15);
+    const lowFor = Math.min(3, ench.for);
+    const highFor = Math.max(0, ench.for - 3);
+    const forBonus = lowFor * 0.15 + highFor * 0.20;
+    if (forBonus > 0) logN += Math.floor(logN * forBonus);
     const appleN = randInt(0,3);
     addItem('maple_log', logN);
     if (appleN > 0) addItem('apple', appleN);
@@ -1837,12 +1854,17 @@ function doMine(r,c){
     return false;
   }
   const ench = getPickEnch();
-  const dmg = PICKAXES[state.pickaxe].dmg + ench.eff;
+  const lowEff = Math.min(3, ench.eff);
+  const highEff = Math.max(0, ench.eff - 3);
+  const dmg = PICKAXES[state.pickaxe].dmg + (lowEff * 1 + highEff * 2);
   d.hp -= dmg;
   gainXp(1);
   if (d.hp <= 0){
     let n = randInt(ore.amt[0], ore.amt[1]);
-    if (ench.for > 0) n += Math.floor(n * ench.for * 0.15);
+    const lowFor = Math.min(3, ench.for);
+    const highFor = Math.max(0, ench.for - 3);
+    const forBonus = lowFor * 0.15 + highFor * 0.20;
+    if (forBonus > 0) n += Math.floor(n * forBonus);
     if (state.divinePick) n = Math.ceil(n * 2);
     if (state.divinePick && Math.random() < 0.40) n += 1;
     addItem(ore.drop, n);
@@ -2219,12 +2241,18 @@ const DIVINE_ITEMS = [
   {id:'divineSunRobe', name:'太阳圣袍', icon:'☀️', desc:'所有出售价格 +50%（永久）', cost:{ stardust:2, emerald:3, sapphire:1 }},
 ];
 
-function openEnchant(tier, activeTab){
-  const isHigh = tier === 'high';
+function openEnchant(stage = 'stage1', activeTab){
+  if (stage === 'stage2' && !state.enchStage2Unlocked) {
+    openEnchantUnlock(2);
+    return;
+  }
+
+  const isHigh = stage === 'stage2';
   const maxLv = isHigh ? 5 : 3;
   const tab = activeTab || 'pick';
 
   if (tab === 'divine'){
+    // 神器合成逻辑（保持原样）
     const rows = DIVINE_ITEMS.map(d => {
       const owned = state[d.id];
       const can = !owned && Object.entries(d.cost).every(([id,n]) => hasItem(id,n));
@@ -2248,10 +2276,10 @@ function openEnchant(tier, activeTab){
             if (!Object.entries(d.cost).every(([id,n]) => hasItem(id,n))){ log('❌ 材料不足'); return; }
             if (!confirm(`确定合成【${d.name}】？消耗所有材料，永久生效。`)) return;
             Object.entries(d.cost).forEach(([id,n]) => removeItem(id, n));
-                        state[d.id] = true;
+            state[d.id] = true;
             if (d.id === 'divineCrown'){ state.staminaMax += 50; state.stamina = state.staminaMax; }
             logEgg(`✨ 成功合成神器【${d.name}】！${d.desc}`);
-            save(); renderAll(); openEnchant(tier, 'divine');
+            save(); renderAll(); openEnchant(stage, 'divine');
           };
         });
       });
@@ -2263,19 +2291,35 @@ function openEnchant(tier, activeTab){
   else if (tab === 'axe'){ toolLabel = state.axe ? AXES[state.axe].name : '未拥有'; ench = getAxeEnch(); toolExists = state.axe > 0; }
   else { toolLabel = state.rod ? RODS[state.rod].name : '未拥有'; ench = getRodEnch(); toolExists = state.rod > 0; }
 
+  // 洗练等级计算（精确还原原版：一阶段无税，二阶段加3税）
   let investedLv = 0;
   if (toolExists){
     for (const e of ENCH_KEYS){
-      for (let lv = 0; lv < ench[e]; lv++) investedLv += (lv + 1) * 2 + (isHigh ? 3 : 0);
+      const cur = ench[e];
+      for (let lv = 0; lv < cur; lv++) {
+        if (lv < 3) investedLv += (lv + 1) * 2; 
+        else investedLv += (lv + 1) * 2 + 3;
+      }
     }
   }
+  // 还原原本的洗练消耗：一阶段5钻石，二阶段3月石
   const refineCost = isHigh ? {moonstone:3} : {diamond:5};
 
   const rows = toolExists ? ENCH_KEYS.map(e => {
     const cur = ench[e];
     const cost = (cur + 1) * 2 + (isHigh ? 3 : 0);
-    const can = cur < maxLv && state.level > cost;
-    return `<div class="craftItem ${can?'':'dis'}" data-ench="${e}" data-cost="${cost}"><div class="ci">${e==='eff'?'⚡':e==='for'?'🍀':'💰'}</div><div class="cn"><b>${ENCH_NAMES[e]} Lv.${cur} → ${cur+1} / ${maxLv}</b><small>消耗 ${cost} 等级 · ${ENCH_DESC[e][tab]}</small></div></div>`;
+    // 保持你之前修过的 >= 判定
+    let can = cur < maxLv && state.level >= cost;
+    
+    // 添加“一阶段没满3级不能去二阶段”的限制（仅UI展示）
+    if (isHigh && cur < 3) {
+       return `<div class="craftItem dis" data-ench="${e}" data-cost="${cost}"><div class="ci">🔒</div><div class="cn"><b>${ENCH_NAMES[e]} 暂未解锁</b><small>请先在一阶段升到 3 级</small></div></div>`;
+    }
+
+    let desc = ENCH_DESC[e][tab];
+    if (isHigh) desc += ' <span style="color:var(--gold);font-weight:bold;">(+5%)</span>';
+
+    return `<div class="craftItem ${can?'':'dis'}" data-ench="${e}" data-cost="${cost}"><div class="ci">${e==='eff'?'⚡':e==='for'?'🍀':'💰'}</div><div class="cn"><b>${ENCH_NAMES[e]} Lv.${cur} → ${cur+1} / ${maxLv}</b><small>消耗 ${cost} 等级 · ${desc}</small></div></div>`;
   }).join('') : `<div style="color:var(--dim);padding:24px;text-align:center">未拥有该工具</div>`;
 
   const refineCostStr = Object.entries(refineCost).map(([id,n]) => {
@@ -2285,7 +2329,11 @@ function openEnchant(tier, activeTab){
   const canRefine = toolExists && investedLv > 0 && Object.entries(refineCost).every(([id,n]) => hasItem(id,n));
   const refineHTML = toolExists ? `<div class="craftItem ${canRefine?'':'dis'}" data-refine="1" style="grid-column:1/-1;margin-top:8px;border-color:#a06cf0"><div class="ci" style="color:#a06cf0">♻️</div><div class="cn"><b>洗练附魔（重置本工具所有附魔）</b><small>消耗 ${refineCostStr} · 退还约 ${investedLv} 等级 · 已投入 ${investedLv} 级</small></div></div>` : '';
 
-  openModal(`<h2>${isHigh?'✨ 高级附魔台':'🔮 低级附魔台'}<span>等级：${state.level} · 当前：${toolLabel}</span></h2>
+  openModal(`<h2>🔮 附魔台 - ${isHigh?'二阶段':'一阶段'}<span>等级：${state.level} · 当前：${toolLabel}</span></h2>
+    <div class="tabs">
+      <div class="tab ${stage==='stage1'?'active':''}" data-stage="stage1">一阶段 (1~3级)</div>
+      <div class="tab ${stage==='stage2'?'active':''}" data-stage="stage2">二阶段 (4~5级)</div>
+    </div>
     <div class="tabs">
       <div class="tab ${tab==='pick'?'active':''}" data-tab="pick">⛏️ 镐子</div>
       <div class="tab ${tab==='axe'?'active':''}" data-tab="axe">🪓 斧头</div>
@@ -2296,12 +2344,21 @@ function openEnchant(tier, activeTab){
     <div class="modalFoot"><button class="btn" id="mClose">关闭</button></div>`,
     m => {
       m.querySelector('#mClose').onclick = closeModal;
-      m.querySelectorAll('.tab').forEach(el => { el.onclick = () => openEnchant(tier, el.dataset.tab); });
+      
+      // 阶段切换
+      m.querySelectorAll('.tab[data-stage]').forEach(el => { 
+        el.onclick = () => openEnchant(el.dataset.stage, tab); 
+      });
+      // 工具/神器切换
+      m.querySelectorAll('.tab[data-tab]').forEach(el => { 
+        el.onclick = () => openEnchant(stage, el.dataset.tab); 
+      });
+
       m.querySelectorAll('.craftItem[data-ench]').forEach(el => {
         el.onclick = () => {
           if (el.classList.contains('dis')){ log('❌ 等级不足或已满级'); return; }
           const e = el.dataset.ench, cost = +el.dataset.cost;
-          if (state.level <= cost){ log('❌ 等级不足'); return; }
+          if (state.level < cost){ log('❌ 等级不足'); return; }
           state.level -= cost;
           let need = xpNeed();
           while (state.xp >= need && state.level >= 0){
@@ -2313,7 +2370,7 @@ function openEnchant(tier, activeTab){
           else if (tab === 'axe') state.tools[axeKey()][e]++;
           else state.tools[rodKey()][e]++;
           log(`✨ ${tab==='pick'?'镐子':tab==='axe'?'斧头':'鱼竿'} ${ENCH_NAMES[e]} 提升到 Lv.${ench[e]+1}！`);
-          renderAll(); openEnchant(tier, tab);
+          renderAll(); openEnchant(stage, tab);
         };
       });
       const refineBtn = m.querySelector('[data-refine]');
@@ -2333,7 +2390,7 @@ function openEnchant(tier, activeTab){
           else if (tab === 'axe') state.tools[axeKey()] = {eff:0,for:0,pro:0};
           else state.tools[rodKey()] = {eff:0,for:0,pro:0};
           log(`♻️ 洗练完成，退还 ${investedLv} 等级`);
-          renderAll(); openEnchant(tier, tab);
+          renderAll(); openEnchant(stage, tab);
         };
       }
     });
@@ -2403,7 +2460,9 @@ function openFishing(){
         emo.textContent = '🎣'; msg.textContent = '浮标漂在水面上…';
         let t = 0;
         const waitTime = 4 + Math.random() * 6;
-        const windowSec = 0.75 + ench.eff * 0.1;
+        const lowEff = Math.min(3, ench.eff);
+        const highEff = Math.max(0, ench.eff - 3);
+        const windowSec = 0.75 + (lowEff * 0.1 + highEff * 0.15);
         const iv = setInterval(() => {
           t += 0.5;
           emo.textContent = t % 1 ? '🎣' : '🌊';
@@ -2899,6 +2958,12 @@ function init(){
     save();
   } else {
     log('💾 存档已加载，欢迎回来！');
+    // 兼容旧存档：合并附魔台
+    if (state.enchLowUnlocked || state.enchHighUnlocked) state.enchUnlocked = true;
+    for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++){
+      if (state.map[r][c].type === 'enchant_high') state.map[r][c] = makeCell('empty');
+      if (state.map[r][c].type === 'enchant_low') state.map[r][c] = makeCell('enchant');
+    }
     if (!state._farmlandFixDone){
       let fixed = 0;
       for (let r=7; r<=15; r++) for (let c=3; c<=11; c++) if (state.map[r][c].type === 'empty'){ state.map[r][c] = makeCell('dirt'); fixed++; }
